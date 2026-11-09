@@ -64,8 +64,10 @@
           </div>
           <section class="hero" aria-labelledby="action-title">
             <div class="hero-copy">
-              <div class="state-tag"><span class="indicator"></span><span id="hero-status">正在检查</span></div>
-              <h2 id="action-title" tabindex="-1">正在打开工作台</h2>
+              <div class="hero-heading">
+                <div class="state-tag"><span class="indicator"></span><span id="hero-status">正在检查</span></div>
+                <h2 id="action-title" tabindex="-1">正在打开工作台</h2>
+              </div>
               <p id="action-description">正在查看登录状态和 FVA 文件夹。</p>
               <div class="actions">
                 <button id="primary-action" type="button" class="button button-primary" hidden><span id="primary-label"></span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button>
@@ -75,10 +77,6 @@
               </div>
               <p id="action-caption" class="caption" hidden></p>
               <p id="location" class="location" hidden></p>
-            </div>
-            <div class="hero-project" aria-hidden="true">
-              <div class="project-cover"><svg class="icon" aria-hidden="true"><use href="#i-layers"></use></svg></div>
-              <div><strong>FVA</strong><small>短视频创作 Skill</small></div>
             </div>
           </section>
           <p id="updates-entry-notice" class="notice updates-entry-notice" role="status" hidden></p>
@@ -96,16 +94,16 @@
           </section>
 
           <section id="onboarding" class="card flow-card" aria-labelledby="flow-title">
-            <div class="card-header"><div><p id="flow-label" class="section-label">第一次参与</p><h2 id="flow-title">三步把改动发给团队</h2></div></div>
+            <div class="flow-heading"><h2 id="flow-title">三步把改动发给团队</h2><p id="flow-label" class="section-label">第一次参与</p></div>
             <ol class="flow-steps">
               <li><button id="step-login" class="flow-step" type="button" disabled>
-                <span class="step-index" aria-hidden="true">01</span><span class="flow-step-copy"><strong>登录账号</strong><span>用团队已开通权限的 GitHub 账号登录。</span><span class="flow-step-action"><span id="step-login-label">登录 GitHub</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
+                <span class="step-index" aria-hidden="true">01</span><span class="flow-step-copy"><strong>登录账号</strong><span class="flow-step-action"><span id="step-login-label">登录 GitHub</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
               </button></li>
               <li><button id="step-folder" class="flow-step" type="button" disabled>
-                <span class="step-index" aria-hidden="true">02</span><span class="flow-step-copy"><strong>选择 SKILL.md</strong><span>选正在使用的那份 SKILL.md，客户端会记住它所在的文件夹。</span><span class="flow-step-action"><span id="step-folder-label">选择 SKILL.md</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
+                <span class="step-index" aria-hidden="true">02</span><span class="flow-step-copy"><strong>选择 SKILL.md</strong><span class="flow-step-action"><span id="step-folder-label">选择 SKILL.md</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
               </button></li>
               <li><button id="step-review" class="flow-step" type="button" disabled>
-                <span class="step-index" aria-hidden="true">03</span><span class="flow-step-copy"><strong>发给团队审核</strong><span>查看本次全部改动，写一句说明，再发送。</span><span class="flow-step-action"><span id="step-review-label">前往查看改动</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
+                <span class="step-index" aria-hidden="true">03</span><span class="flow-step-copy"><strong>发给团队审核</strong><span class="flow-step-action"><span id="step-review-label">前往查看改动</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
               </button></li>
             </ol>
           </section>
