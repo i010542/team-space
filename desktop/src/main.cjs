@@ -78,7 +78,7 @@ function wire() {
         } else if (name === 'bindWorkspace') {
           const selected = await dialog.showOpenDialog(window, {title:'选择正在使用的 FVA 文件夹（直接包含 SKILL.md）',properties:['openDirectory'],buttonLabel:'选择这份 FVA'});
           if(selected.canceled || selected.filePaths.length !== 1) return {ok:true,value:null};
-          const answer = await dialog.showMessageBox(window,{type:'question',title:'绑定正在使用的 FVA',message:'从这个文件夹读取日常修改并提交审核？',detail:selected.filePaths[0]+'\n\n不会搬动、覆盖这里的文件，也不会在这里初始化 Git。首次会与当前团队版本比较；提交前仍需选择文件和确认。',buttons:['取消','绑定此文件夹'],defaultId:0,cancelId:0,noLink:true});
+          const answer = await dialog.showMessageBox(window,{type:'question',title:'记住我的 FVA 文件夹',message:'以后都从这个文件夹查看你的修改？',detail:selected.filePaths[0]+'\n\n你继续在原来的工具里使用和修改这份 FVA。这里会记住它的位置，先与团队版本比较；等你选好文件并确认后，才会发给团队审核。选择文件夹不会搬动或改写其中的文件。',buttons:['取消','使用这个文件夹'],defaultId:0,cancelId:0,noLink:true});
           if(answer.response!==1)return {ok:true,value:null};
           value=await service.bindWorkspace(selected.filePaths[0]);
         } else if (name === 'updateWorkspace') {
@@ -89,13 +89,13 @@ function wire() {
           if (!input || typeof input.previewId !== 'string' || !updatePreview || input.previewId !== updatePreview.previewId) throw new Error('更新预览已过期，请重新检查团队更新。');
           if (!updatePreview.canApply) throw new Error(updatePreview.blockedReason || '当前不能应用更新。');
           const choices = input.resolutions;
-          if (!choices || typeof choices !== 'object' || Array.isArray(choices) || Object.keys(choices).length > 500 || Object.values(choices).some(choice => choice !== 'mine' && choice !== 'team')) throw new Error('请为每个冲突选择保留本机或团队内容。');
+          if (!choices || typeof choices !== 'object' || Array.isArray(choices) || Object.keys(choices).length > 500 || Object.values(choices).some(choice => choice !== 'mine' && choice !== 'team')) throw new Error('有些文件需要你确认，请逐个选择用哪一份。');
           const current = await service.status();
-          if (!current.workspace?.bound || current.workspace.id !== updatePreview.workspace.id || current.recoveryRequired) throw new Error('工作目录已变化或需要恢复，请重新检查。');
+          if (!current.workspace?.bound || current.workspace.id !== updatePreview.workspace.id || current.recoveryRequired) throw new Error('FVA 文件夹或当前任务已变化，请回到工作台重新检查。');
           const conflicts = updatePreview.files.filter(file => file.status === 'conflict');
-          if (conflicts.some(file => !Object.hasOwn(choices, file.path)) || Object.keys(choices).some(name => !conflicts.some(file => file.path === name))) throw new Error('请完成所有冲突选择，再应用更新。');
+          if (conflicts.some(file => !Object.hasOwn(choices, file.path)) || Object.keys(choices).some(name => !conflicts.some(file => file.path === name))) throw new Error('请为每个需要确认的文件选好用哪一份，再更新。');
           const selectedTeam = Object.values(choices).filter(choice => choice === 'team').length;
-          const answer = await dialog.showMessageBox(window, {type:'question', title:'更新我的 FVA', message:'先备份，再将确认的更新应用到正在使用的 FVA？', detail:current.workspace.path + '\n\n冲突处理：' + selectedTeam + ' 项使用团队内容，' + (conflicts.length - selectedTeam) + ' 项保留本机内容。\n请先保存文件，并在更新完成前暂停编辑。预览后发生变化的文件会阻止本次更新。', buttons:['取消','备份并更新'], defaultId:0, cancelId:0, noLink:true});
+          const answer = await dialog.showMessageBox(window, {type:'question', title:'更新我的 FVA', message:'先留一份备份，再更新正在使用的 FVA？', detail:current.workspace.path + '\n\n需要你选择版本的文件：' + selectedTeam + ' 项用团队的，' + (conflicts.length - selectedTeam) + ' 项保留我的。\n请先保存文件，等更新完成后再继续修改。如果文件在检查后又变了，这次更新会停止。', buttons:['取消','备份并更新'], defaultId:0, cancelId:0, noLink:true});
           if (answer.response !== 1) throw new Error('已取消更新，使用中的文件保持原样。');
           value = await service.applyUpdates({previewId:input.previewId,resolutions:choices});
           updatePreview = null;
@@ -108,7 +108,7 @@ function wire() {
           value = await service.restoreUpdate({backupId:input.backupId});
           updatePreview = null;
         } else if (name === 'recoverWorkspace') {
-          const answer = await dialog.showMessageBox(window,{type:'question',title:'保留文件并另开任务',message:'保留使用中的 FVA，从团队最新版本建立新的后台审核任务？',detail:'正在使用的 FVA 文件夹不会被修改。旧后台工作副本和本地提交也会保留；新任务仍从你绑定的目录读取改动，不会自动发送到 GitHub。',buttons:['取消','保留文件，另开任务'],defaultId:0,cancelId:0,noLink:true});
+          const answer = await dialog.showMessageBox(window,{type:'question',title:'开始新一轮修改',message:'保留你的文件，重新准备一轮给团队的修改？',detail:'你正在使用的 FVA 文件保持原样。客户端会重新对照团队版本，检查这个文件夹的差别；旧的修改记录也会保留。等你选择文件并确认后，才会发给团队。',buttons:['取消','保留文件，开始新一轮'],defaultId:0,cancelId:0,noLink:true});
           if(answer.response!==1)throw new Error('已取消，继续保留当前任务。');
           value=await service.recoverWorkspace();
         } else if (name === 'submit') {
@@ -123,7 +123,7 @@ function wire() {
             if (!input || typeof input.title !== 'string' || !Array.isArray(input.files) || input.files.length > 100 || typeof input.previewId !== 'string') throw new Error('请先刷新改动并填写修改说明。');
             title = input.title; count = input.files.length;
           }
-          const answer = await dialog.showMessageBox(window, {type:'question',title:'提交审核',message:input?.retry ? '继续将上次提交发送到 GitHub 并发起审核？' : '将选中的修改提交到你的个人分支，并发起审核？',detail:title.slice(0,200) + '\n\n共 ' + count + ' 个文件；不会直接修改正式版本。',buttons:['取消','提交审核'],defaultId:0,cancelId:0,noLink:true});
+          const answer = await dialog.showMessageBox(window, {type:'question',title:'发给团队审核',message:input?.retry ? '继续发送上次没发完的修改，请团队审核？' : '将选中的修改发给团队，请大家审核？',detail:title.slice(0,200) + '\n\n共 ' + count + ' 个文件。修改会通过 GitHub 发给团队，审核并采纳后才会进入团队正式版本。',buttons:['取消','发给团队审核'],defaultId:0,cancelId:0,noLink:true});
           if (answer.response !== 1) throw new Error('已取消提交，文件保持原样。');
           value = await service.submit(input.retry === true ? retryInput : input);
         } else value = await service[name]();

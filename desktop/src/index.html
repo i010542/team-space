@@ -23,6 +23,7 @@
     <symbol id="i-file" viewBox="0 0 24 24"><path d="M13 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10l-7-7Zm0 0v7h7M8 14h8m-8 3h5"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
     <symbol id="i-review" viewBox="0 0 24 24"><path d="M20 11.4a7.5 7.5 0 0 1-7.5 7.6H5l1.5-3A7.5 7.5 0 1 1 20 11.4Z"/><path d="m9 11 2 2 4-4"/></symbol>
+    <symbol id="i-versions" viewBox="0 0 24 24"><path d="M8 4H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3M10 3h9a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/></symbol>
   </svg>
   <a class="skip" href="#main-content">跳到主要内容</a>
   <div class="app-shell">
@@ -31,14 +32,14 @@
         <div class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-layers"></use></svg></div>
         <div><strong>共创空间</strong><small>TEAM SPACE</small></div>
       </div>
-      <div class="nav-label">工作区</div>
+      <div class="nav-label">共创空间</div>
       <nav aria-label="主导航">
         <button class="nav-item" type="button" data-page="work" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-grid"></use></svg>工作台</button>
-        <button class="nav-item" type="button" data-page="projects"><svg class="icon" aria-hidden="true"><use href="#i-layers"></use></svg>Skill 项目</button>
+        <button class="nav-item" type="button" data-page="projects"><svg class="icon" aria-hidden="true"><use href="#i-layers"></use></svg>团队项目</button>
         <button class="nav-item" type="button" data-page="docs"><svg class="icon" aria-hidden="true"><use href="#i-book"></use></svg>项目资料</button>
         <button class="nav-item" type="button" data-page="help"><svg class="icon" aria-hidden="true"><use href="#i-help"></use></svg>使用帮助</button>
       </nav>
-      <div class="sidebar-note"><svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg><div><strong>GitHub 账号权限</strong><p>使用团队授予权限的账号访问项目。</p></div></div>
+      <div class="sidebar-note"><svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg><div><strong>GitHub 登录</strong><p>用团队已开通权限的账号。</p></div></div>
     </aside>
 
     <div class="workspace">
@@ -61,17 +62,17 @@
           <div class="page-header">
             <p class="eyebrow">团队项目 / FVA</p>
             <h1 id="work-heading" tabindex="-1">FVA 共创工作台</h1>
-            <p>继续使用现有的 FVA，在这里查看改动并提交给团队审核。</p>
+            <p>修改原来的 FVA 文件，检查后发给团队审核。</p>
           </div>
           <section class="hero" aria-labelledby="action-title">
             <div class="hero-copy">
-              <div class="state-tag"><span class="indicator"></span><span id="hero-status">检查环境</span></div>
-              <h2 id="action-title">正在读取工作台状态</h2>
-              <p id="action-description">正在检查 GitHub 账号和本机工作文件。</p>
+              <div class="state-tag"><span class="indicator"></span><span id="hero-status">正在检查</span></div>
+              <h2 id="action-title">正在打开工作台</h2>
+              <p id="action-description">正在查看登录状态和 FVA 文件夹。</p>
               <div class="actions">
                 <button id="primary-action" type="button" class="button button-primary" hidden><span id="primary-label"></span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button>
-                <button id="permission-link" type="button" class="button button-secondary" data-external="repository" hidden>查看项目权限 <svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button>
-                <button id="previous-folder" type="button" class="button button-secondary" hidden><svg class="icon" aria-hidden="true"><use href="#i-folder"></use></svg>打开正在使用的 FVA</button>
+                <button id="permission-link" type="button" class="button button-secondary" data-external="repository" hidden>在浏览器查看项目权限 <svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button>
+                <button id="previous-folder" type="button" class="button button-secondary" hidden><svg class="icon" aria-hidden="true"><use href="#i-folder"></use></svg>打开 FVA 文件夹</button>
                 <button id="rebind-workspace" type="button" class="button button-secondary" aria-describedby="action-caption" hidden>更换 FVA 文件夹</button>
               </div>
               <p id="action-caption" class="caption" hidden></p>
@@ -86,8 +87,8 @@
 
           <section id="device-panel" class="card device-panel" aria-labelledby="device-title" hidden>
             <div>
-              <h2 id="device-title">在浏览器完成 GitHub 授权</h2>
-              <p>打开 GitHub 验证页，输入下面的代码。确认授权后，回到这里继续。</p>
+              <h2 id="device-title">在浏览器完成 GitHub 登录</h2>
+              <p>打开验证页，输入下面的代码。按提示确认后回到这里。</p>
               <p id="device-feedback" class="caption" role="status"></p>
             </div>
             <div class="device-actions">
@@ -97,65 +98,65 @@
           </section>
 
           <section id="onboarding" class="card flow-card" aria-labelledby="flow-title">
-            <div class="card-header"><div><p class="section-label">参与流程</p><h2 id="flow-title">从打开文件到提交审核</h2></div></div>
+            <div class="card-header"><div><p class="section-label">第一次参与</p><h2 id="flow-title">三步把改动发给团队</h2></div></div>
             <ol class="flow-steps">
-              <li><span class="step-index">01</span><div><strong>连接账号</strong><p>用团队授权的 GitHub 账号登录。</p></div></li>
-              <li><span class="step-index">02</span><div><strong>绑定现有 FVA</strong><p>选择包含 SKILL.md 的 FVA 文件夹，继续用 WorkBuddy 或 Codex 修改原文件。</p></div></li>
-              <li><span class="step-index">03</span><div><strong>请团队审核</strong><p>勾选改好的文件，写一句说明，再提交。</p></div></li>
+              <li><span class="step-index">01</span><div><strong>登录账号</strong><p>用团队已开通权限的 GitHub 账号登录。</p></div></li>
+              <li><span class="step-index">02</span><div><strong>选 FVA 文件夹</strong><p>选好后，照常用 WorkBuddy 或 Codex 修改并保存。</p></div></li>
+              <li><span class="step-index">03</span><div><strong>发给团队审核</strong><p>勾选改好的文件，写一句说明，再发送。</p></div></li>
             </ol>
           </section>
 
           <div id="workspace-panels" class="panel-stack" hidden>
             <section id="pending-panel" class="card pending-panel" aria-labelledby="pending-title" hidden>
               <div class="card-header">
-                <div><p class="section-label">提交未完成</p><h2 id="pending-title">继续上次提交</h2><p id="pending-description"></p></div>
+                <div><p class="section-label">发送未完成</p><h2 id="pending-title">上次的改动还没发完</h2><p id="pending-description"></p></div>
                 <div class="pending-actions">
-                  <button id="retry-submit" type="button" class="button button-primary">继续上次提交 <svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button>
-                  <button id="recover-workspace" type="button" class="button button-secondary">保留文件，另开任务</button>
+                  <button id="retry-submit" type="button" class="button button-primary">继续发给团队 <svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button>
+                  <button id="recover-workspace" type="button" class="button button-secondary">保留文件，开始新一轮</button>
                 </div>
               </div>
               <details class="advanced"><summary>查看上次选择的文件</summary><ul id="pending-files" class="pending-files"></ul></details>
             </section>
             <section id="changes-card" class="card changes-card" aria-labelledby="changes-title">
               <div class="card-header">
-                <div><p class="section-label">01 / 修改与提交</p><h2 id="changes-title">检查本机改动</h2><p>在 WorkBuddy 或 Codex 保存原文件后，刷新改动，再勾选这次要提交的文件。</p></div>
+                <div><p class="section-label">01 / 选文件</p><h2 id="changes-title">选出要发的改动</h2><p>保存文件后点「刷新改动」，勾选这次要发的文件。</p></div>
                 <button id="refresh-changes" class="button button-secondary" type="button"><svg class="icon" aria-hidden="true"><use href="#i-refresh"></use></svg>刷新改动</button>
               </div>
-              <p id="refresh-reminder" class="refresh-reminder" role="status" hidden>文件可能已变化。请先刷新改动，再确认要提交的文件。修改说明会保留。</p>
+              <p id="refresh-reminder" class="refresh-reminder" role="status" hidden>文件可能有新改动。请刷新后重新选文件，已写的说明会保留。</p>
               <div id="changes-empty" class="empty-state">
                 <svg class="icon" aria-hidden="true"><use href="#i-file"></use></svg>
-                <div><strong id="changes-empty-title">查看正在使用的 FVA</strong><p id="changes-empty-description">点右上角「刷新改动」，查看这份 FVA 的待提交文件。</p></div>
+                <div><strong id="changes-empty-title">查看你的改动</strong><p id="changes-empty-description">点「刷新改动」查看可以发给团队的文件。</p></div>
               </div>
               <div id="changes-form" class="changes-form" hidden>
                 <div class="file-list-head"><strong>改动文件</strong><span id="selected-count" role="status" aria-live="polite"></span></div>
                 <ul id="file-list" class="file-list"></ul>
                 <form id="submit-form">
-                  <label for="submit-title">修改说明</label>
+                  <label for="submit-title">写一句修改说明</label>
                   <input id="submit-title" name="title" maxlength="120" placeholder="例如：补充开头两秒的镜头提示" autocomplete="off" required>
-                  <div class="submit-footer"><p class="caption" id="submit-hint">提交后，团队可以在 GitHub 审核所选改动。</p><button id="submit-button" class="button button-primary" type="submit" aria-describedby="submit-hint" disabled>提交审核 <svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button></div>
+                  <div class="submit-footer"><p class="caption" id="submit-hint">团队审核并采用后，改动才进入正式版本。</p><button id="submit-button" class="button button-primary" type="submit" aria-describedby="submit-hint" disabled>发给团队审核 <svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button></div>
                 </form>
               </div>
             </section>
             <section id="review-card" class="card review-card" aria-labelledby="review-title">
               <div class="card-header">
-                <div><p class="section-label">02 / 审核</p><h2 id="review-title">查看审核结果</h2></div>
-                <button id="check-review" type="button" class="button button-secondary"><svg class="icon" aria-hidden="true"><use href="#i-refresh"></use></svg>查看结果</button>
+                <div><p class="section-label">02 / 看进度</p><h2 id="review-title">查看审核进度</h2></div>
+                <button id="check-review" type="button" class="button button-secondary"><svg class="icon" aria-hidden="true"><use href="#i-refresh"></use></svg>刷新审核进度</button>
               </div>
-              <div class="review-state"><div class="review-icon"><svg class="icon" aria-hidden="true"><use href="#i-review"></use></svg></div><div><strong id="review-status">尚未查询</strong><p id="review-description">提交审核后，可在这里查看团队的处理进度。</p></div></div>
+              <div class="review-state"><div class="review-icon"><svg class="icon" aria-hidden="true"><use href="#i-review"></use></svg></div><div><strong id="review-status">尚未查看</strong><p id="review-description">发给团队后，可以在这里查看审核进度。</p></div></div>
               <div class="actions">
-                <button id="open-review" type="button" class="button button-secondary" data-external="pr" hidden>在 GitHub 查看审核 <svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button>
+                <button id="open-review" type="button" class="button button-secondary" data-external="pr" hidden>在浏览器查看审核和留言 <svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button>
               </div>
             </section>
             <section id="team-updates-card" class="card team-updates-card" aria-labelledby="team-updates-title">
               <div class="card-header">
-                <div><p class="section-label">03 / 团队更新</p><h2 id="team-updates-title" tabindex="-1">更新正在使用的 FVA</h2><p>先看哪些文件会变。确认更新时，客户端会先备份受影响的文件。</p></div>
+                <div><p class="section-label">03 / 团队更新</p><h2 id="team-updates-title" tabindex="-1">更新我的 FVA</h2><p>先看哪些文件会变。确认后会先备份，再更新。</p></div>
                 <button id="update-workspace" type="button" class="button button-secondary"><svg class="icon" aria-hidden="true"><use href="#i-refresh"></use></svg>检查团队更新</button>
               </div>
               <p id="update-availability" class="caption" role="status" hidden></p>
               <section id="updates-panel" class="updates-panel" aria-labelledby="updates-title" hidden>
                 <h3 id="updates-title" tabindex="-1">团队更新预览</h3>
                 <p id="updates-message" class="caption"></p>
-                <p id="update-conflict-help" class="caption" hidden>首次保留本机版本会暂缓提交该文件。请在原目录手动合并需要的团队内容，再检查团队更新。如仍有冲突，确认保留本机版本后即可继续提交。</p>
+                <p id="update-conflict-help" class="caption" hidden>第一次选择「保留我的版本」后，这个文件暂时不能发给团队。先在原文件中补上你需要的团队改动，再检查更新。如仍需选择，确认「保留我的版本」后就能继续发送。</p>
                 <ul id="updates-files" class="updates-files"></ul>
                 <div class="updates-footer">
                   <p id="update-decisions" class="caption" role="status"></p>
@@ -178,29 +179,44 @@
         </div>
 
         <div id="projects-page" class="page" hidden>
-          <div class="page-header"><p class="eyebrow">团队工作区</p><h1 id="projects-heading" tabindex="-1">Skill 项目</h1><p>打开团队维护的 Skill，查看资料、提交改动和检查更新。</p></div>
+          <div class="page-header"><p class="eyebrow">共创空间</p><h1 id="projects-heading" tabindex="-1">团队项目</h1><p>在这里找到 FVA 的工作台、资料和团队更新。</p></div>
           <div class="project-catalog">
             <article class="card project-card" aria-labelledby="fva-project-title">
               <div class="card-header">
                 <div class="project-title"><div class="project-cover"><svg class="icon" aria-hidden="true"><use href="#i-layers"></use></svg></div><div><p class="section-label">短视频创作 Skill</p><h2 id="fva-project-title">FVA</h2></div></div>
-                <span class="state-tag"><svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg>私有仓库</span>
+                <span class="state-tag"><svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg>仅限团队成员</span>
               </div>
-              <p>从参考视频拆解到分镜、制作和复盘，把可复用的方法整理成团队工作流。</p>
+              <p>从参考视频分析到脚本、分镜和生成提示词，整理可复用的创作方法。</p>
               <div class="actions">
                 <button type="button" class="button button-primary" data-local-view="workspace">打开 FVA 工作台 <svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button>
                 <button type="button" class="button button-secondary" data-local-view="docs">项目资料</button>
                 <button type="button" class="button button-secondary" data-local-view="updates">团队更新</button>
               </div>
-              <details class="project-repository">
-                <summary>GitHub 仓库入口</summary>
-                <p class="caption">以下链接在浏览器打开。</p>
-                <div class="actions">
-                  <button type="button" class="text-button" data-external="repository">仓库首页 <svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button>
-                  <button type="button" class="text-button" data-external="branches">分支 <svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button>
-                  <button type="button" class="text-button" data-external="pulls">审核请求 <svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button>
-                  <button type="button" class="text-button" data-external="issues">问题与讨论 <svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button>
+              <section class="project-repository" aria-labelledby="project-resources-title">
+                <h3 id="project-resources-title">查看更多团队内容</h3>
+                <div class="project-resources">
+                  <button type="button" class="project-resource" data-external="repository">
+                    <span class="resource-icon"><svg class="icon" aria-hidden="true"><use href="#i-folder"></use></svg></span>
+                    <span class="resource-copy"><strong>查看团队文件</strong><small>查看团队正式版本的文件。</small></span>
+                    <span class="browser-marker"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg>浏览器打开</span>
+                  </button>
+                  <button type="button" class="project-resource" data-external="branches">
+                    <span class="resource-icon"><svg class="icon" aria-hidden="true"><use href="#i-versions"></use></svg></span>
+                    <span class="resource-copy"><strong>大家的修改版本</strong><small>查看单独保存的修改版本。</small></span>
+                    <span class="browser-marker"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg>浏览器打开</span>
+                  </button>
+                  <button type="button" class="project-resource" data-external="pulls">
+                    <span class="resource-icon"><svg class="icon" aria-hidden="true"><use href="#i-review"></use></svg></span>
+                    <span class="resource-copy"><strong>待审核的修改</strong><small>查看已经发出、还没处理完的修改。</small></span>
+                    <span class="browser-marker"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg>浏览器打开</span>
+                  </button>
+                  <button type="button" class="project-resource" data-external="issues">
+                    <span class="resource-icon"><svg class="icon" aria-hidden="true"><use href="#i-help"></use></svg></span>
+                    <span class="resource-copy"><strong>提问题或建议</strong><small>查看团队讨论，或提出你的想法。</small></span>
+                    <span class="browser-marker"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg>浏览器打开</span>
+                  </button>
                 </div>
-              </details>
+              </section>
             </article>
           </div>
         </div>
@@ -221,7 +237,7 @@
               <p id="doc-count" class="caption" role="status"></p>
             </div>
             <ul class="doc-list">
-              <li data-doc-category="guide"><button type="button" data-local-view="help"><svg class="icon" aria-hidden="true"><use href="#i-help"></use></svg><span><strong>第一次参与 FVA</strong><small>从登录和绑定，到提交审核、更新及恢复。</small><small class="doc-source">客户端使用帮助</small></span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button></li>
+              <li data-doc-category="guide"><button type="button" data-local-view="help"><svg class="icon" aria-hidden="true"><use href="#i-help"></use></svg><span><strong>第一次参与 FVA</strong><small>登录、选文件夹、发改动、查看结果。</small><small class="doc-source">客户端使用帮助</small></span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button></li>
               <li data-doc-category="project"><button type="button" data-external="skill"><svg class="icon" aria-hidden="true"><use href="#i-file"></use></svg><span><strong>FVA Skill 说明</strong><small>了解 FVA 的用途、适用任务和工作流程。</small><small class="doc-source">SKILL.md · 浏览器原文</small></span><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button></li>
               <li data-doc-category="guide"><button type="button" data-external="install"><svg class="icon" aria-hidden="true"><use href="#i-file"></use></svg><span><strong>FVA 安装与接入</strong><small>查看安装及接入说明。</small><small class="doc-source">INSTALL.md · 浏览器原文</small></span><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button></li>
               <li data-doc-category="project"><button type="button" data-external="structure"><svg class="icon" aria-hidden="true"><use href="#i-file"></use></svg><span><strong>FVA 项目结构</strong><small>了解各个目录和文件的用途。</small><small class="doc-source">STRUCTURE.md · 浏览器原文</small></span><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button></li>
@@ -233,23 +249,23 @@
         </div>
 
         <div id="help-page" class="page" hidden>
-          <div class="page-header"><p class="eyebrow">共创入门</p><h1 id="help-heading" tabindex="-1">使用帮助</h1><p>从绑定现有的 FVA 到查收审核结果。</p></div>
+          <div class="page-header"><p class="eyebrow">共创入门</p><h1 id="help-heading" tabindex="-1">使用帮助</h1><p>从选择 FVA 文件夹开始，一步步把改动发给团队。</p></div>
           <section class="card help-card" aria-labelledby="help-title">
             <div class="card-header"><div><p class="section-label">第一次参与</p><h2 id="help-title">完成一次共创</h2></div></div>
             <ol class="help-list">
-              <li><span class="step-index">01</span><div><strong>用 GitHub 登录</strong><p>在工作台点击「GitHub 登录」，在浏览器使用团队授权的账号完成验证。</p></div></li>
-              <li><span class="step-index">02</span><div><strong>绑定现有的 FVA</strong><p>点击「选择正在使用的 FVA 文件夹」，选择直接包含 SKILL.md 的目录。绑定后仍在原目录用 WorkBuddy 或 Codex 修改和保存。</p></div></li>
-              <li><span class="step-index">03</span><div><strong>挑选文件并提交审核</strong><p>回到工作台，刷新改动，查看每个文件的摘要。只勾选这次要提交的文件，写一句修改说明，再点击「提交审核」。</p></div></li>
-              <li><span class="step-index">04</span><div><strong>查看审核和更新 FVA</strong><p>点击「查看结果」查询审核进度。检查团队更新后，先看文件预览并处理冲突，再确认更新。需要时可以恢复到更新前的版本。</p></div></li>
+              <li><span class="step-index">01</span><div><strong>用团队账号登录</strong><p>GitHub 是团队保存文件和审核改动的地方。在工作台点「登录 GitHub」，按浏览器提示完成登录。</p></div></li>
+              <li><span class="step-index">02</span><div><strong>选择现在用的 FVA 文件夹</strong><p>选择打开后就能看到 SKILL.md 的文件夹。客户端会记住它。以后仍在原处用 WorkBuddy 或 Codex 改文件。</p></div></li>
+              <li><span class="step-index">03</span><div><strong>选文件，发给团队审核</strong><p>保存后回到工作台，点「刷新改动」。勾选这次要发的文件，写一句说明，再点「发给团队审核」。</p></div></li>
+              <li><span class="step-index">04</span><div><strong>看审核进度，按需更新</strong><p>点「刷新审核进度」看结果。要更新自己的 FVA，先看哪些文件会变，再确认。需要时可以恢复更新前的文件。</p></div></li>
             </ol>
           </section>
           <section class="card help-card" aria-labelledby="questions-title">
             <div class="card-header"><div><h2 id="questions-title">常见问题</h2></div></div>
-            <details><summary>为什么提示没有项目权限？</summary><p>先确认浏览器和客户端使用的是团队授权的 GitHub 账号；如仍无法访问，请联系项目负责人开通项目访问与提交权限。</p></details>
-            <details><summary>为什么有些文件不能勾选？</summary><p>客户端仅允许提交项目支持的文件。请按文件旁的提示调整，不要把密钥、账号配置或个人资料放进项目。</p></details>
-            <details><summary>首次绑定后，改动是怎么判断的？</summary><p>工作台以绑定时的团队版本为对照，显示这份 FVA 中已有的差异。未安装的团队文件会保持缺省，不作为你的删除改动。</p></details>
-            <details><summary>更新时保留了本机版本，怎样继续提交？</summary><p>首次保留本机版本会暂缓提交该文件。请先在原目录合并需要的团队内容，再检查团队更新。如仍有冲突，选择保留本机版本并确认更新。</p></details>
-            <details><summary>怎么知道修改进入了正式版本？</summary><p>审核状态显示「已合并」时，修改才进入正式版本。仅提交审核或审核关闭，不代表修改已经合入。</p></details>
+            <details><summary>为什么进不了项目或发不了改动？</summary><p>请确认浏览器和客户端都在用团队已开通权限的 GitHub 账号。仍有问题时，请联系项目负责人。</p></details>
+            <details><summary>为什么有些文件不能勾选？</summary><p>请看文件旁的原因。项目只接收支持的文件，密码、密钥和个人资料请留在本机。</p></details>
+            <details><summary>刚选好文件夹，为什么已经有改动？</summary><p>客户端会拿你的文件和团队当时的版本对照。之前改过的文件也会列出。从来没有安装过的文件不会算作你删除了它。</p></details>
+            <details><summary>选了「保留我的版本」，怎样继续发送？</summary><p>先在原文件中补上你需要的团队改动，再检查更新。如仍需选择，选「保留我的版本」并确认更新。</p></details>
+            <details><summary>怎么知道团队采用了我的改动？</summary><p>审核进度显示「已采用」时，改动已经进入团队正式版本。刚发出时，请等团队审核。</p></details>
           </section>
           <section class="card help-card" aria-labelledby="client-help-title">
             <div class="card-header"><div><h2 id="client-help-title">Windows 客户端</h2><p>如需重新安装或升级，可在浏览器下载新版安装程序。</p></div></div>
