@@ -194,12 +194,8 @@ svg { flex: none; vertical-align: middle; }
 .guide-step .step-number { margin-top: 3px; }
 
 .guide-step p { color: var(--muted); font-size: 13px; margin-top: 6px; }
-.guide-step pre { overflow: auto; margin: 12px 0 0; padding: 10px; border-radius: 8px; background: #eef3fb; color: var(--text); }
-.guide-step code { font: 12px/1.65 var(--mono); }
-.review-card { padding: 16px; }
-.review-list { display: grid; gap: 9px; padding: 0 0 14px; margin-bottom: 13px; border-bottom: 1px solid var(--line); }
-.review-list li { display: flex; gap: 7px; font-size: 13px; color: var(--muted); }
-.review-list svg { margin-top: 3px; color: var(--accent-text); }
+.review-card { align-self: start; padding: 16px; }
+.desktop-callout { padding: 17px 19px; background: var(--accent-soft); }
 
 @media (max-width: 1000px) {
   .shell { grid-template-columns: 186px minmax(0, 1fr); }
@@ -245,18 +241,6 @@ svg { flex: none; vertical-align: middle; }
   .filter-group button { padding-inline: 8px; }
 }
 
-.glossary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 15px 16px; margin-bottom: 22px; }
-.glossary dt { font-size: 13px; color: var(--accent-text); font-weight: 650; }
-.glossary dd { font-size: 12px; color: var(--muted); margin-top: 2px; }
 .guide-step h3 { font-size: 18px; line-height: 1.4; }
 .guide-step p strong { color: var(--text); }
 .guide-source { padding: 10px 2px; }
-.copy-branch { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
-.copy-branch code { display: inline-block; padding: 4px 7px; border-radius: 5px; background: var(--accent-soft); overflow-wrap: anywhere; }
-.copy-branch button { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); color: var(--accent-text); font-size: 12px; }
-.copy-branch button:hover { background: var(--accent-soft); }
-.copy-branch [role="status"] { font-size: 12px; color: var(--accent-text); }
-.command-option { margin-top: 10px; font-size: 12px; color: var(--accent-text); }
-.command-option summary { cursor: pointer; width: fit-content; }
-@media (max-width: 500px) { .glossary { grid-template-columns: 1fr; gap: 8px; } }
-

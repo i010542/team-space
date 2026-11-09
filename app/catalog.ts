@@ -1,6 +1,7 @@
 export const repo = "https://github.com/i010542/fva";
 export const defaultBranch = "main";
-export const exampleBranch = "zhangsan/fva-shot-guide";
+export const websiteSource = "https://github.com/i010542/team-space";
+export const desktopDownload = websiteSource + "/releases/download/desktop-v0.1.0/Team-Space-0.1.0-Setup.exe";
 
 export const projects = [
   {
@@ -18,7 +19,7 @@ export const documents = [
   {
     id: "guide",
     title: "第一次参与 Skill 共创",
-    description: "从认领改动、创建分支到发起和合并 PR。",
+    description: "安装 Windows 客户端，在本地编辑并提交审核。",
     category: "入门指南",
     source: "站内指南",
     href: "/guide",
@@ -60,11 +61,7 @@ export const documents = [
 export type DocumentEntry = (typeof documents)[number];
 
 export const steps = [
-  { title: "创建分支", short: "从默认分支出发", code: "git switch main\ngit pull --ff-only\ngit switch -c zhangsan/fva-shot-guide" },
-  { title: "提交改动", short: "保留清晰记录", code: "git status\ngit diff\ngit add SKILL.md\ngit commit -m \"Clarify shot guidance\"\ngit push -u origin zhangsan/fva-shot-guide" },
-  { title: "发起 PR", short: "交给队友评审" },
-  { title: "验证与修订", short: "记录实际结果" },
-  { title: "审核后合并", short: "回到默认分支" },
+  { title: "安装并登录", short: "使用有仓库权限的账号", description: "下载并运行安装程序，打开客户端后登录 GitHub。请使用有 FVA 仓库写入权限的账号。" },
+  { title: "打开工作区并修改", short: "在本地修改 Skill", description: "点击「开始参与」，客户端会创建个人工作区和分支。点击「打开文件夹」，用熟悉的编辑器或 AI 工具修改文件。" },
+  { title: "选择改动并提交", short: "发送给项目维护者审核", description: "回到客户端刷新改动，查看差异并勾选本次要提交的文件，填写修改说明，然后点击「提交审核」。客户端将选中的改动推送到个人分支并创建 PR，由维护者审核合并。" },
 ];
-
-

@@ -1,10 +1,10 @@
 import Link from "next/link";
 import {
-  ArrowLeft, ArrowRight, ArrowUpRight, BookOpen, Boxes, Check, ChevronRight,
-  CircleHelp, FileText, GitBranch, GitPullRequest, LayoutGrid, LockKeyhole,
+  ArrowLeft, ArrowRight, ArrowUpRight, BookOpen, Boxes, ChevronRight,
+  CircleHelp, Download, FileText, GitBranch, GitPullRequest, LayoutGrid, LockKeyhole,
   Workflow,
 } from "lucide-react";
-import { repo, type DocumentEntry } from "./catalog";
+import { desktopDownload, repo, type DocumentEntry } from "./catalog";
 
 const nav = [
   { id: "home", title: "空间概览", href: "/", icon: LayoutGrid },
@@ -79,6 +79,14 @@ export function SectionHeading({ title, children, href, link }: { title: string;
 
 export function External({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) {
   return <a href={href} target="_blank" rel="noopener noreferrer" className={className}>{children}<span className="sr-only">（在新标签页打开）</span></a>;
+}
+
+export function DesktopDownload() {
+  return (
+    <a href={desktopDownload} className="button button-light">
+      <Download size={16} aria-hidden />下载 Windows 客户端
+    </a>
+  );
 }
 
 export function ProjectCard({ project, heading: Title = "h3" }: { heading?: "h2" | "h3"; project: { id: string; title: string; subtitle: string; description: string; repo: string } }) {
@@ -159,14 +167,3 @@ export function RepositoryLinks() {
 export function BackLink() {
   return <Link href="/projects" className="back-link"><ArrowLeft size={16} aria-hidden />返回项目目录</Link>;
 }
-
-export function ReviewChecklist() {
-  return <ul className="review-list">{[
-    "PR 说明改动目的、适用范围和验证结果。",
-    "变更在自己的分支，目标分支选择正确。",
-    "差异中没有密钥、私有素材或无关文件。",
-    "评审意见与必要检查都已处理。",
-  ].map((item) => <li key={item}><Check size={16} aria-hidden />{item}</li>)}</ul>;
-}
-
-

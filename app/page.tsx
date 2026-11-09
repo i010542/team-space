@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, GitBranch, GitPullRequest } from "lucide-react";
+import { ArrowRight, GitBranch, GitPullRequest } from "lucide-react";
 import { documents, projects, steps } from "./catalog";
-import { BranchArt, DocumentRow, ProjectCard, SectionHeading, Shell } from "./ui";
+import { BranchArt, DesktopDownload, DocumentRow, ProjectCard, SectionHeading, Shell } from "./ui";
 
 export default function Home() {
   return (
@@ -11,10 +11,10 @@ export default function Home() {
         <div className="hero-content">
           <p className="eyebrow"><span />团队工作台</p>
           <h1 id="welcome">团队共创空间</h1>
-          <p className="hero-description">查找团队的 Skill 项目与资料。<br />从自己的分支出发，把改动交给团队评审。</p>
+          <p className="hero-description">在 Windows 客户端参与 FVA 协作。<br />在这里浏览团队的 Skill 项目和只读资料。</p>
           <div className="hero-actions">
-            <Link href="/projects" className="button button-light">浏览 Skill 项目<ArrowRight size={16} aria-hidden /></Link>
-            <Link href="/guide" className="button button-outline">协作指南<ArrowUpRight size={15} aria-hidden /></Link>
+            <DesktopDownload />
+            <Link href="/guide" className="button button-outline">协作指南<ArrowRight size={16} aria-hidden /></Link>
           </div>
         </div>
       </section>
@@ -25,9 +25,9 @@ export default function Home() {
           {projects.map((project) => <ProjectCard key={project.id} project={project} />)}
         </section>
         <section aria-label="团队协作流程">
-          <SectionHeading title="团队协作" href="/guide" link="完整指南">每次改动有分支，每次合并有评审。</SectionHeading>
+          <SectionHeading title="团队协作" href="/guide" link="完整指南">在客户端编辑、核对并提交文件。</SectionHeading>
           <div className="workflow-card card">
-            <div className="workflow-intro"><span className="doc-icon"><GitPullRequest size={17} aria-hidden /></span><strong>从分支到合并</strong></div>
+            <div className="workflow-intro"><span className="doc-icon"><GitPullRequest size={17} aria-hidden /></span><strong>从安装到提交审核</strong></div>
             <ol className="workflow-list">
               {steps.map((step, index) => <li key={step.title}><span className="step-number">{String(index + 1).padStart(2, "0")}</span><strong>{step.title}</strong><small>{step.short}</small></li>)}
             </ol>
@@ -43,5 +43,3 @@ export default function Home() {
     </Shell>
   );
 }
-
-
