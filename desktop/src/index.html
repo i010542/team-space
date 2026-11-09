@@ -35,7 +35,6 @@
       <div class="nav-label">共创空间</div>
       <nav aria-label="主导航">
         <button class="nav-item" type="button" data-page="work" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-grid"></use></svg>工作台</button>
-        <button class="nav-item" type="button" data-page="projects"><svg class="icon" aria-hidden="true"><use href="#i-layers"></use></svg>团队项目</button>
         <button class="nav-item" type="button" data-page="docs"><svg class="icon" aria-hidden="true"><use href="#i-book"></use></svg>项目资料</button>
         <button class="nav-item" type="button" data-page="help"><svg class="icon" aria-hidden="true"><use href="#i-help"></use></svg>使用帮助</button>
       </nav>
@@ -60,7 +59,7 @@
 
         <div id="work-page" class="page">
           <div class="page-header">
-            <p class="eyebrow">团队项目 / FVA</p>
+            <p class="eyebrow">我的 FVA</p>
             <h1 id="work-heading" tabindex="-1">FVA 共创工作台</h1>
             <p>修改原来的 FVA 文件，检查后发给团队审核。</p>
           </div>
@@ -176,49 +175,35 @@
               <dl><dt>正在使用的 FVA</dt><dd id="workspace-path"></dd><dt>后台审核分支</dt><dd id="workspace-branch"></dd></dl>
             </details>
           </div>
-        </div>
 
-        <div id="projects-page" class="page" hidden>
-          <div class="page-header"><p class="eyebrow">共创空间</p><h1 id="projects-heading" tabindex="-1">团队项目</h1><p>在这里找到 FVA 的工作台、资料和团队更新。</p></div>
-          <div class="project-catalog">
-            <article class="card project-card" aria-labelledby="fva-project-title">
-              <div class="card-header">
-                <div class="project-title"><div class="project-cover"><svg class="icon" aria-hidden="true"><use href="#i-layers"></use></svg></div><div><p class="section-label">短视频创作 Skill</p><h2 id="fva-project-title">FVA</h2></div></div>
-                <span class="state-tag"><svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg>仅限团队成员</span>
-              </div>
-              <p>从参考视频分析到脚本、分镜和生成提示词，整理可复用的创作方法。</p>
-              <div class="actions">
-                <button type="button" class="button button-primary" data-local-view="workspace">打开 FVA 工作台 <svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button>
-                <button type="button" class="button button-secondary" data-local-view="docs">项目资料</button>
-                <button type="button" class="button button-secondary" data-local-view="updates">团队更新</button>
-              </div>
-              <section class="project-repository" aria-labelledby="project-resources-title">
-                <h3 id="project-resources-title">查看更多团队内容</h3>
-                <div class="project-resources">
-                  <button type="button" class="project-resource" data-external="repository">
-                    <span class="resource-icon"><svg class="icon" aria-hidden="true"><use href="#i-folder"></use></svg></span>
-                    <span class="resource-copy"><strong>查看团队文件</strong><small>查看团队正式版本的文件。</small></span>
-                    <span class="browser-marker"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg>浏览器打开</span>
-                  </button>
-                  <button type="button" class="project-resource" data-external="branches">
-                    <span class="resource-icon"><svg class="icon" aria-hidden="true"><use href="#i-versions"></use></svg></span>
-                    <span class="resource-copy"><strong>大家的修改版本</strong><small>查看单独保存的修改版本。</small></span>
-                    <span class="browser-marker"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg>浏览器打开</span>
-                  </button>
-                  <button type="button" class="project-resource" data-external="pulls">
-                    <span class="resource-icon"><svg class="icon" aria-hidden="true"><use href="#i-review"></use></svg></span>
-                    <span class="resource-copy"><strong>待审核的修改</strong><small>查看已经发出、还没处理完的修改。</small></span>
-                    <span class="browser-marker"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg>浏览器打开</span>
-                  </button>
-                  <button type="button" class="project-resource" data-external="issues">
-                    <span class="resource-icon"><svg class="icon" aria-hidden="true"><use href="#i-help"></use></svg></span>
-                    <span class="resource-copy"><strong>提问题或建议</strong><small>查看团队讨论，或提出你的想法。</small></span>
-                    <span class="browser-marker"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg>浏览器打开</span>
-                  </button>
-                </div>
-              </section>
-            </article>
-          </div>
+          <section id="team-collaboration" class="card team-collaboration" aria-labelledby="team-collaboration-title">
+            <div class="card-header">
+              <div><h2 id="team-collaboration-title">团队协作</h2><p>查看团队文件、待审核的修改和讨论。</p></div>
+              <button type="button" class="button button-primary" data-local-view="docs"><svg class="icon" aria-hidden="true"><use href="#i-book"></use></svg>查看项目资料</button>
+            </div>
+            <div class="project-resources">
+              <button type="button" class="project-resource" data-external="repository">
+                <span class="resource-icon"><svg class="icon" aria-hidden="true"><use href="#i-folder"></use></svg></span>
+                <span class="resource-copy"><strong>查看团队文件</strong><small>查看团队正式版本的文件。</small></span>
+                <span class="browser-marker"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg>浏览器打开</span>
+              </button>
+              <button type="button" class="project-resource" data-external="branches">
+                <span class="resource-icon"><svg class="icon" aria-hidden="true"><use href="#i-versions"></use></svg></span>
+                <span class="resource-copy"><strong>大家的修改版本</strong><small>查看单独保存的修改版本。</small></span>
+                <span class="browser-marker"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg>浏览器打开</span>
+              </button>
+              <button type="button" class="project-resource" data-external="pulls">
+                <span class="resource-icon"><svg class="icon" aria-hidden="true"><use href="#i-review"></use></svg></span>
+                <span class="resource-copy"><strong>待审核的修改</strong><small>查看已经发出、还没处理完的修改。</small></span>
+                <span class="browser-marker"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg>浏览器打开</span>
+              </button>
+              <button type="button" class="project-resource" data-external="issues">
+                <span class="resource-icon"><svg class="icon" aria-hidden="true"><use href="#i-help"></use></svg></span>
+                <span class="resource-copy"><strong>提问题或建议</strong><small>查看团队讨论，或提出你的想法。</small></span>
+                <span class="browser-marker"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg>浏览器打开</span>
+              </button>
+            </div>
+          </section>
         </div>
 
         <div id="docs-page" class="page" hidden>
