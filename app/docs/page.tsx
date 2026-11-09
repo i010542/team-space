@@ -1,15 +1,7 @@
-import { AccessNote, Heading, Shell } from "../ui";
-import { DocSearch } from "./doc-search";
+import { Landing } from "../ui";
 
-export const metadata = { title: "文档资料" };
+export const metadata = { title: "项目资料" };
 
 export default function Docs() {
-  return (
-    <Shell section="docs">
-      <Heading eyebrow="只读资料库" title="文档资料">按标题、文件名和分类查找入门指南及 FVA 的仓库原文。</Heading>
-      <DocSearch />
-      <AccessNote />
-    </Shell>
-  );
+  return <Landing view="docs" title="在客户端查看 FVA 资料" description="在客户端按标题、文件名或分类查找项目资料和使用帮助。" />;
 }
-

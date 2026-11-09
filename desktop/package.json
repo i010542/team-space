@@ -1,6 +1,6 @@
 {
   "name": "team-space-desktop",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "团队 Skill 共创客户端",
   "author": "i010542",
   "private": true,
@@ -43,6 +43,7 @@
       "artifactName": "Team-Space-${version}-Setup.${ext}"
     },
     "nsis": {
+      "include": "scripts/installer.nsh",
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,

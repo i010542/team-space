@@ -10,8 +10,11 @@ const ended = () => review?.state === 'merged' || review?.state === 'closed';
 const canWork = () => status?.authorized && status.tools?.git && status.tools?.gh;
 const externalButtons = [...document.querySelectorAll('[data-external]')];
 const workButtons = [...document.querySelectorAll('[data-page]')];
+const docFilters = [...document.querySelectorAll('[data-doc-filter]')];
+const docRows = [...document.querySelectorAll('[data-doc-category]')];
 const changeLabels = { added: '新增', modified: '修改', deleted: '删除', A: '新增', M: '修改', D: '删除' };
 const updateLabels = { added: '新增', modified: '更新', deleted: '移除', merged: '自动合并', conflict: '需要选择', skipped: '保留原样' };
+const navigationLabels = { workspace: 'FVA 工作台', docs: 'FVA 项目资料', updates: 'FVA 团队更新' };
 
 let status;
 let review;
@@ -27,6 +30,14 @@ let needsRefresh = false;
 let updatePreview;
 let updateStale = false;
 let updateChoices = new Map();
+let navigationReady = false;
+let initializing = true;
+let waitingForUpdateSection = false;
+let navigationRequested = false;
+let navigationNeedsConfirmation = false;
+let readingNavigation = false;
+let pendingNavigation;
+let docCategory = 'all';
 
 function message(target, value) {
   say(target, value);
@@ -75,6 +86,7 @@ function render() {
   show('pending-panel', pending && !recovering);
   show('open-review', Boolean(review?.url || (!review && workspace?.prUrl)));
   show('refresh-reminder', needsRefresh);
+  if (bound) message('updates-entry-notice', '');
 
   if (!status) {
     hero('检查环境', working ? '正在读取工作台状态' : '暂时无法读取工作台',
@@ -151,6 +163,7 @@ function render() {
   }
   updateSelection();
   renderUpdateControls();
+  renderNavigation();
 }
 
 function updateSelection() {
@@ -319,6 +332,7 @@ async function run(label, operation) {
   } finally {
     busy = '';
     render();
+    void receiveNavigation();
   }
 }
 
@@ -576,6 +590,8 @@ function submit(input) {
 }
 
 function navigate(page, label) {
+  waitingForUpdateSection = false;
+  message('updates-entry-notice', '');
   for (const button of workButtons) {
     const active = button.dataset.page === page;
     if (active) button.setAttribute('aria-current', 'page');
@@ -586,6 +602,105 @@ function navigate(page, label) {
   id(page + '-heading').focus({ preventScroll: true });
   window.scrollTo(0, 0);
 }
+
+function hasNavigationDraft() {
+  return Boolean(selected.size || id('submit-title').value || updatePreview);
+}
+
+function renderNavigation() {
+  show('navigation-request', Boolean(pendingNavigation));
+  if (pendingNavigation) say('navigation-message', '网页请求打开「' + navigationLabels[pendingNavigation] + '」。');
+  disable('accept-navigation', Boolean(busy || !pendingNavigation));
+}
+
+function openNavigation(view) {
+  clearTimeout(focusTimer);
+  if (view === 'docs') {
+    navigate('docs', '项目资料');
+    return;
+  }
+  if (view === 'help') {
+    navigate('help', '使用帮助');
+    return;
+  }
+  navigate('work', '工作台');
+  if (view !== 'updates') return;
+  if (initializing) {
+    waitingForUpdateSection = true;
+    message('updates-entry-notice', '正在检查 FVA 文件夹。');
+    return;
+  }
+  locateTeamUpdates();
+}
+
+function locateTeamUpdates() {
+  if (!account()?.bound) {
+    message('updates-entry-notice', '请先绑定正在使用的 FVA。绑定后可在工作台的「团队更新」中查看更新。');
+    return;
+  }
+  id('team-updates-title').focus({ preventScroll: true });
+  id('team-updates-card').scrollIntoView({ block: 'start' });
+}
+
+function filterDocuments() {
+  const terms = id('doc-query').value.trim().toLowerCase().split(/\s+/u).filter(Boolean);
+  let count = 0;
+  for (const row of docRows) {
+    const matchesCategory = docCategory === 'all' || row.dataset.docCategory === docCategory;
+    const searchable = row.textContent.toLowerCase();
+    const matches = matchesCategory && terms.every((term) => searchable.includes(term));
+    row.hidden = !matches;
+    if (matches) count++;
+  }
+  for (const button of docFilters) button.setAttribute('aria-pressed', String(button.dataset.docFilter === docCategory));
+  say('doc-count', count + ' 条资料');
+  show('doc-empty', count === 0);
+}
+
+function signalNavigation() {
+  navigationRequested = true;
+  if ((busy && !initializing) || hasNavigationDraft()) navigationNeedsConfirmation = true;
+  void receiveNavigation();
+}
+
+async function receiveNavigation() {
+  if (!navigationReady || !navigationRequested || readingNavigation || (busy && !initializing) || pendingNavigation || !api?.takeNavigation) return;
+  navigationRequested = false;
+  readingNavigation = true;
+  const needsConfirmation = navigationNeedsConfirmation;
+  navigationNeedsConfirmation = false;
+  try {
+    const route = await api.takeNavigation();
+    if (route?.project !== 'fva' || !Object.hasOwn(navigationLabels, route.view)) return;
+    navigationRequested = true;
+    if (needsConfirmation || (busy && !initializing) || hasNavigationDraft()) {
+      navigationNeedsConfirmation = true;
+      pendingNavigation = route.view;
+      renderNavigation();
+    } else {
+      openNavigation(route.view);
+    }
+  } catch {
+    // The current view stays usable if the desktop handoff is unavailable.
+  } finally {
+    readingNavigation = false;
+    if (navigationRequested) void receiveNavigation();
+  }
+}
+
+id('accept-navigation').addEventListener('click', () => {
+  if (!pendingNavigation || busy) return;
+  const view = pendingNavigation;
+  pendingNavigation = undefined;
+  renderNavigation();
+  openNavigation(view);
+  void receiveNavigation();
+});
+id('dismiss-navigation').addEventListener('click', () => {
+  pendingNavigation = undefined;
+  renderNavigation();
+  void receiveNavigation();
+});
 
 id('primary-action').addEventListener('click', () => {
   if (primary === 'status') run('检查工作台', fetchStatus);
@@ -658,6 +773,23 @@ for (const button of externalButtons) {
 for (const button of workButtons) {
   button.addEventListener('click', () => navigate(button.dataset.page, button.textContent.trim()));
 }
+for (const button of document.querySelectorAll('[data-local-view]')) {
+  button.addEventListener('click', () => openNavigation(button.dataset.localView));
+}
+for (const button of docFilters) {
+  button.addEventListener('click', () => {
+    docCategory = button.dataset.docFilter;
+    filterDocuments();
+  });
+}
+id('doc-query').addEventListener('input', filterDocuments);
+id('reset-doc-filter').addEventListener('click', () => {
+  docCategory = 'all';
+  id('doc-query').value = '';
+  filterDocuments();
+  id('doc-query').focus();
+});
+filterDocuments();
 id('device-code').addEventListener('focus', (event) => event.target.select());
 id('device-open').addEventListener('click', async () => {
   if (deviceOpening || busy !== '连接 GitHub') return;
@@ -683,10 +815,21 @@ if (api) {
     notice('已取得验证码，请在浏览器完成授权。');
   });
   window.addEventListener('beforeunload', unsubscribe, { once: true });
+  const unsubscribeNavigation = api.onNavigation?.(signalNavigation);
+  if (typeof unsubscribeNavigation === 'function') window.addEventListener('beforeunload', unsubscribeNavigation, { once: true });
+  navigationReady = Boolean(api.takeNavigation);
+  if (navigationReady) signalNavigation();
   window.addEventListener('focus', refreshOnFocus);
   run('检查工作台', async () => {
     await fetchStatus();
     if (canWork() && account()?.bound && !account()?.pending && !status?.recoveryRequired) await optional(fetchChanges);
+  }).finally(() => {
+    initializing = false;
+    if (waitingForUpdateSection) {
+      waitingForUpdateSection = false;
+      locateTeamUpdates();
+    }
+    void receiveNavigation();
   });
 } else {
   render();

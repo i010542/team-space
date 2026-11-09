@@ -11,6 +11,13 @@ contextBridge.exposeInMainWorld('teamSpace', Object.freeze({
   updateWorkspace: () => call('updateWorkspace'), recoverWorkspace: () => call('recoverWorkspace'), reviewStatus: () => call('reviewStatus'),
   applyUpdates: input => call('applyUpdates', input), restoreUpdate: input => call('restoreUpdate', input),
   openExternal: key => call('openExternal', key),
+  takeNavigation: () => call('takeNavigation'),
+  onNavigation: callback => {
+    if (typeof callback !== 'function') return () => {};
+    const listener = () => callback();
+    ipcRenderer.on('team-space:navigation', listener);
+    return () => ipcRenderer.removeListener('team-space:navigation', listener);
+  },
   onProgress: callback => {
     if (typeof callback !== 'function') return () => {};
     const listener = (_event, value) => callback(value);

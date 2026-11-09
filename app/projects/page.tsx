@@ -1,16 +1,7 @@
-import { projects } from "../catalog";
-import { AccessNote, Heading, ProjectCard, Shell } from "../ui";
+import { Landing } from "../ui";
 
 export const metadata = { title: "Skill 项目" };
 
 export default function Projects() {
-  return (
-    <Shell section="projects">
-      <Heading eyebrow="项目目录" title="Skill 项目">查找团队维护的 Skill，进入项目原文、分支和评审。</Heading>
-      <div className="catalog-grid">{projects.map((project) => <ProjectCard key={project.id} project={project} heading="h2" />)}</div>
-      <AccessNote />
-    </Shell>
-  );
+  return <Landing title="在客户端查看 Skill 项目" description="打开团队共创空间客户端，在项目目录中查看 FVA、资料、审核和更新入口。" />;
 }
-
-

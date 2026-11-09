@@ -1,31 +1,7 @@
-import { documents, defaultBranch } from "../../catalog";
-import { AccessNote, BackLink, DesktopDownload, DocumentRow, Heading, RepositoryLinks, SectionHeading, Shell } from "../../ui";
+import { Landing } from "../../ui";
 
 export const metadata = { title: "FVA" };
 
 export default function Fva() {
-  return (
-    <Shell section="projects" title="FVA">
-      <BackLink />
-      <Heading eyebrow="短视频创作 Skill" title="FVA">拆解参考视频，辅助制作，并记录可以复用的经验。</Heading>
-      <dl className="card repository-meta">
-        <div><dt>仓库</dt><dd>i010542/fva</dd></div>
-        <div><dt>默认分支</dt><dd><code>{defaultBranch}</code></dd></div>
-        <div><dt>访问范围</dt><dd>私有仓库</dd></div>
-      </dl>
-      <section className="subsection card desktop-callout" aria-label="参与 FVA">
-        <SectionHeading title="参与 FVA 共创" href="/guide" link="使用指南">使用 Windows 客户端创建个人工作区，修改后提交给维护者审核。</SectionHeading>
-        <DesktopDownload />
-      </section>
-      <section className="subsection" aria-label="仓库入口">
-        <SectionHeading title="仓库入口">代码、分支和讨论均在 GitHub 查看。</SectionHeading>
-        <RepositoryLinks />
-        <AccessNote />
-      </section>
-      <section className="subsection" aria-label="FVA 文档">
-        <SectionHeading title="FVA 文档" href="/docs" link="文档资料" />
-        <ul className="card doc-list">{documents.filter(({ id }) => id !== "guide").map((document) => <DocumentRow key={document.id} document={document} />)}</ul>
-      </section>
-    </Shell>
-  );
+  return <Landing title="FVA 短视频创作 Skill" description="在本地客户端查看 FVA 项目和资料，提交你对这份 Skill 的修改，或安装团队更新。" />;
 }

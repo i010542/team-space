@@ -34,6 +34,7 @@
       <div class="nav-label">工作区</div>
       <nav aria-label="主导航">
         <button class="nav-item" type="button" data-page="work" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-grid"></use></svg>工作台</button>
+        <button class="nav-item" type="button" data-page="projects"><svg class="icon" aria-hidden="true"><use href="#i-layers"></use></svg>Skill 项目</button>
         <button class="nav-item" type="button" data-page="docs"><svg class="icon" aria-hidden="true"><use href="#i-book"></use></svg>项目资料</button>
         <button class="nav-item" type="button" data-page="help"><svg class="icon" aria-hidden="true"><use href="#i-help"></use></svg>使用帮助</button>
       </nav>
@@ -48,6 +49,13 @@
       <main id="main-content" class="content" tabindex="-1">
         <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
         <div id="error" class="notice" data-tone="error" role="alert" hidden></div>
+        <section id="navigation-request" class="notice navigation-request" aria-labelledby="navigation-message" hidden>
+          <div><p id="navigation-message" role="status"></p><p class="caption">当前填写的内容和选择会保留。</p></div>
+          <div class="actions">
+            <button id="dismiss-navigation" class="button button-secondary" type="button">暂不切换</button>
+            <button id="accept-navigation" class="button button-primary" type="button">前往</button>
+          </div>
+        </section>
 
         <div id="work-page" class="page">
           <div class="page-header">
@@ -74,6 +82,7 @@
               <div><strong>FVA</strong><small>短视频创作 Skill</small></div>
             </div>
           </section>
+          <p id="updates-entry-notice" class="notice updates-entry-notice" role="status" hidden></p>
 
           <section id="device-panel" class="card device-panel" aria-labelledby="device-title" hidden>
             <div>
@@ -139,7 +148,7 @@
             </section>
             <section id="team-updates-card" class="card team-updates-card" aria-labelledby="team-updates-title">
               <div class="card-header">
-                <div><p class="section-label">03 / 团队更新</p><h2 id="team-updates-title">更新正在使用的 FVA</h2><p>先看哪些文件会变。确认更新时，客户端会先备份受影响的文件。</p></div>
+                <div><p class="section-label">03 / 团队更新</p><h2 id="team-updates-title" tabindex="-1">更新正在使用的 FVA</h2><p>先看哪些文件会变。确认更新时，客户端会先备份受影响的文件。</p></div>
                 <button id="update-workspace" type="button" class="button button-secondary"><svg class="icon" aria-hidden="true"><use href="#i-refresh"></use></svg>检查团队更新</button>
               </div>
               <p id="update-availability" class="caption" role="status" hidden></p>
@@ -168,16 +177,57 @@
           </div>
         </div>
 
+        <div id="projects-page" class="page" hidden>
+          <div class="page-header"><p class="eyebrow">团队工作区</p><h1 id="projects-heading" tabindex="-1">Skill 项目</h1><p>打开团队维护的 Skill，查看资料、提交改动和检查更新。</p></div>
+          <div class="project-catalog">
+            <article class="card project-card" aria-labelledby="fva-project-title">
+              <div class="card-header">
+                <div class="project-title"><div class="project-cover"><svg class="icon" aria-hidden="true"><use href="#i-layers"></use></svg></div><div><p class="section-label">短视频创作 Skill</p><h2 id="fva-project-title">FVA</h2></div></div>
+                <span class="state-tag"><svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg>私有仓库</span>
+              </div>
+              <p>从参考视频拆解到分镜、制作和复盘，把可复用的方法整理成团队工作流。</p>
+              <div class="actions">
+                <button type="button" class="button button-primary" data-local-view="workspace">打开 FVA 工作台 <svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button>
+                <button type="button" class="button button-secondary" data-local-view="docs">项目资料</button>
+                <button type="button" class="button button-secondary" data-local-view="updates">团队更新</button>
+              </div>
+              <details class="project-repository">
+                <summary>GitHub 仓库入口</summary>
+                <p class="caption">以下链接在浏览器打开。</p>
+                <div class="actions">
+                  <button type="button" class="text-button" data-external="repository">仓库首页 <svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button>
+                  <button type="button" class="text-button" data-external="branches">分支 <svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button>
+                  <button type="button" class="text-button" data-external="pulls">审核请求 <svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button>
+                  <button type="button" class="text-button" data-external="issues">问题与讨论 <svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button>
+                </div>
+              </details>
+            </article>
+          </div>
+        </div>
+
         <div id="docs-page" class="page" hidden>
-          <div class="page-header"><p class="eyebrow">团队项目 / FVA</p><h1 id="docs-heading" tabindex="-1">项目资料</h1><p>查看项目说明、安装指南和变更记录。资料会在浏览器打开。</p></div>
+          <div class="page-header"><p class="eyebrow">团队项目 / FVA</p><h1 id="docs-heading" tabindex="-1">项目资料</h1><p>按标题、文件名或分类查找资料。正式项目原文在 GitHub 浏览。</p></div>
           <section class="card doc-card" aria-labelledby="docs-title">
-            <div class="card-header"><div><p class="section-label">正式版本 · 只读资料</p><h2 id="docs-title">FVA 文档</h2></div><button type="button" class="button button-secondary" data-external="repository">打开项目仓库 <svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button></div>
+            <div class="card-header"><div><p class="section-label">只读资料</p><h2 id="docs-title">FVA 资料目录</h2></div></div>
+            <label for="doc-query" class="doc-search-label">搜索资料</label>
+            <input id="doc-query" class="doc-query" type="search" autocomplete="off" placeholder="例如：安装、SKILL.md 或变更记录">
+            <div class="doc-toolbar">
+              <div class="doc-filters" role="group" aria-label="资料分类">
+                <button class="button button-secondary" type="button" data-doc-filter="all" aria-pressed="true">全部</button>
+                <button class="button button-secondary" type="button" data-doc-filter="guide" aria-pressed="false">入门指南</button>
+                <button class="button button-secondary" type="button" data-doc-filter="project" aria-pressed="false">项目资料</button>
+                <button class="button button-secondary" type="button" data-doc-filter="version" aria-pressed="false">版本记录</button>
+              </div>
+              <p id="doc-count" class="caption" role="status"></p>
+            </div>
             <ul class="doc-list">
-              <li><button type="button" data-external="skill"><svg class="icon" aria-hidden="true"><use href="#i-file"></use></svg><span><strong>FVA Skill 说明</strong><small>了解 FVA 的用途、适用任务和工作流程。</small></span><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button></li>
-              <li><button type="button" data-external="install"><svg class="icon" aria-hidden="true"><use href="#i-file"></use></svg><span><strong>FVA 安装与接入</strong><small>查看安装及接入说明。</small></span><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button></li>
-              <li><button type="button" data-external="structure"><svg class="icon" aria-hidden="true"><use href="#i-file"></use></svg><span><strong>FVA 项目结构</strong><small>了解各个目录和文件的用途。</small></span><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button></li>
-              <li><button type="button" data-external="changelog"><svg class="icon" aria-hidden="true"><use href="#i-file"></use></svg><span><strong>FVA 变更记录</strong><small>查看正式版本的更新历史。</small></span><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button></li>
+              <li data-doc-category="guide"><button type="button" data-local-view="help"><svg class="icon" aria-hidden="true"><use href="#i-help"></use></svg><span><strong>第一次参与 FVA</strong><small>从登录和绑定，到提交审核、更新及恢复。</small><small class="doc-source">客户端使用帮助</small></span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button></li>
+              <li data-doc-category="project"><button type="button" data-external="skill"><svg class="icon" aria-hidden="true"><use href="#i-file"></use></svg><span><strong>FVA Skill 说明</strong><small>了解 FVA 的用途、适用任务和工作流程。</small><small class="doc-source">SKILL.md · 浏览器原文</small></span><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button></li>
+              <li data-doc-category="guide"><button type="button" data-external="install"><svg class="icon" aria-hidden="true"><use href="#i-file"></use></svg><span><strong>FVA 安装与接入</strong><small>查看安装及接入说明。</small><small class="doc-source">INSTALL.md · 浏览器原文</small></span><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button></li>
+              <li data-doc-category="project"><button type="button" data-external="structure"><svg class="icon" aria-hidden="true"><use href="#i-file"></use></svg><span><strong>FVA 项目结构</strong><small>了解各个目录和文件的用途。</small><small class="doc-source">STRUCTURE.md · 浏览器原文</small></span><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button></li>
+              <li data-doc-category="version"><button type="button" data-external="changelog"><svg class="icon" aria-hidden="true"><use href="#i-file"></use></svg><span><strong>FVA 变更记录</strong><small>查看正式版本的更新历史。</small><small class="doc-source">CHANGELOG.md · 浏览器原文</small></span><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button></li>
             </ul>
+            <div id="doc-empty" class="doc-empty" hidden><p>没有找到匹配的资料。</p><button id="reset-doc-filter" type="button" class="text-button">清空搜索和筛选</button></div>
           </section>
           <p class="caption docs-note">如果浏览器提示没有权限，请确认登录的是团队授权的 GitHub 账号。</p>
         </div>
@@ -200,6 +250,10 @@
             <details><summary>首次绑定后，改动是怎么判断的？</summary><p>工作台以绑定时的团队版本为对照，显示这份 FVA 中已有的差异。未安装的团队文件会保持缺省，不作为你的删除改动。</p></details>
             <details><summary>更新时保留了本机版本，怎样继续提交？</summary><p>首次保留本机版本会暂缓提交该文件。请先在原目录合并需要的团队内容，再检查团队更新。如仍有冲突，选择保留本机版本并确认更新。</p></details>
             <details><summary>怎么知道修改进入了正式版本？</summary><p>审核状态显示「已合并」时，修改才进入正式版本。仅提交审核或审核关闭，不代表修改已经合入。</p></details>
+          </section>
+          <section class="card help-card" aria-labelledby="client-help-title">
+            <div class="card-header"><div><h2 id="client-help-title">Windows 客户端</h2><p>如需重新安装或升级，可在浏览器下载新版安装程序。</p></div></div>
+            <button type="button" class="button button-secondary" data-external="portal">在浏览器查看客户端下载 <svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button>
           </section>
         </div>
         <footer class="footer"><span>团队共创空间 · Windows</span><span>FVA 短视频创作 Skill</span></footer>

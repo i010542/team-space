@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: { default: "团队共创空间", template: "%s · 团队共创空间" },
-  description: "团队 Skill 项目、只读资料与 GitHub 协作指南。",
+  description: "下载或打开团队共创空间 Windows 客户端。",
   icons: { icon: (process.env.NEXT_PUBLIC_BASE_PATH || "") + "/favicon.svg" },
 };
 

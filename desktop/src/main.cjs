@@ -2,17 +2,26 @@ const { app, BrowserWindow, ipcMain, protocol, net, session, shell, dialog } = r
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { createService } = require('./core.cjs');
+const { launchActivation, secondActivation, createNavigationQueue } = require('./deep-link.cjs');
 protocol.registerSchemesAsPrivileged([{ scheme: 'teamspace', privileges: { standard: true, secure: true, supportFetchAPI: false } }]);
 app.setName('Team Space');
 let window, service, busy = false, updatePreview = null;
+let windowReady = false, focusPending = false;
+const navigation = createNavigationQueue();
 const pages = new Set(['/index.html', '/styles.css', '/renderer.js']);
 const external = Object.freeze({
   repository: 'https://github.com/i010542/fva',
+  branches: 'https://github.com/i010542/fva/branches',
+  pulls: 'https://github.com/i010542/fva/pulls',
+  issues: 'https://github.com/i010542/fva/issues',
   skill: 'https://github.com/i010542/fva/blob/main/SKILL.md',
   install: 'https://github.com/i010542/fva/blob/main/INSTALL.md',
   structure: 'https://github.com/i010542/fva/blob/main/STRUCTURE.md',
   changelog: 'https://github.com/i010542/fva/blob/main/CHANGELOG.md',
-  device: 'https://github.com/login/device'
+  device: 'https://github.com/login/device',
+  portal: 'https://i010542.github.io/team-space/',
+  portalFva: 'https://i010542.github.io/team-space/projects/fva/',
+  portalDocs: 'https://i010542.github.io/team-space/docs/'
 });
 const mutators = new Set(['login', 'startWorkspace', 'submit', 'updateWorkspace', 'recoverWorkspace', 'bindWorkspace', 'applyUpdates', 'restoreUpdate']);
 function safeError(error) {
@@ -27,7 +36,20 @@ function trusted(event) {
     return url.protocol === 'teamspace:' && url.host === 'workspace' && url.pathname === '/index.html' && url.search === '';
   } catch { return false; }
 }
+function flushNavigation() {
+  if (!windowReady || busy || !window || window.isDestroyed()) return;
+  if (focusPending) {
+    focusPending = false;
+    if (window.isMinimized()) window.restore();
+    window.focus();
+  }
+  if (navigation.pending) window.webContents.send('team-space:navigation');
+}
 function wire() {
+  ipcMain.handle('team-space:takeNavigation', async (event, input) => {
+    if (!trusted(event) || input !== undefined) return {ok:false,error:'不允许的导航请求。'};
+    return {ok:true,value:busy ? null : navigation.take()};
+  });
   for (const name of ['status','login','startWorkspace','bindWorkspace','changes','submit','openWorkspace','updateWorkspace','applyUpdates','restoreUpdate','recoverWorkspace','reviewStatus','openExternal']) {
     ipcMain.handle('team-space:' + name, async (event, input) => {
       if (!trusted(event)) return {ok:false,error:'不允许的页面请求。'};
@@ -107,7 +129,12 @@ function wire() {
         } else value = await service[name]();
         return {ok:true,value};
       } catch (error) { return {ok:false,error:safeError(error)}; }
-      finally { if (mutate) busy = false; }
+      finally {
+        if (mutate) {
+          busy = false;
+          flushNavigation();
+        }
+      }
     });
   }
 }
@@ -131,10 +158,22 @@ async function start() {
   window.webContents.on('will-attach-webview', e => e.preventDefault());
   window.once('ready-to-show',()=>window.show());
   await window.loadURL('teamspace://workspace/index.html');
+  windowReady = true;
+  flushNavigation();
 }
-if (!app.requestSingleInstanceLock()) app.quit();
+const initialActivation = launchActivation(process.argv, process.defaultApp);
+if (!app.requestSingleInstanceLock(initialActivation)) app.quit();
 else {
-  app.on('second-instance',()=>{ if(window){if(window.isMinimized())window.restore();window.focus();} });
+  navigation.enqueue(initialActivation.navigation);
+  // Chromium can reorder or append arguments in second-instance. The new
+  // process validates its original argv before handing us this enum.
+  app.on('second-instance', (_event, _argv, _cwd, data) => {
+    const activation = secondActivation(data);
+    if (!activation) return;
+    navigation.enqueue(activation.navigation);
+    focusPending = true;
+    flushNavigation();
+  });
   app.whenReady().then(start).catch(error=>{dialog.showErrorBox('无法启动团队共创空间',safeError(error));app.quit();});
   app.on('window-all-closed',()=>app.quit());
 }
