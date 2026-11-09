@@ -35,6 +35,7 @@
       <div class="nav-label">共创空间</div>
       <nav aria-label="主导航">
         <button class="nav-item" type="button" data-page="work" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-grid"></use></svg>工作台</button>
+        <button class="nav-item" type="button" data-page="team"><svg class="icon" aria-hidden="true"><use href="#i-layers"></use></svg>团队协作</button>
         <button class="nav-item" type="button" data-page="docs"><svg class="icon" aria-hidden="true"><use href="#i-book"></use></svg>项目资料</button>
         <button class="nav-item" type="button" data-page="help"><svg class="icon" aria-hidden="true"><use href="#i-help"></use></svg>使用帮助</button>
       </nav>
@@ -94,16 +95,16 @@
           </section>
 
           <section id="onboarding" class="card flow-card" aria-labelledby="flow-title">
-            <div class="flow-heading"><h2 id="flow-title">三步把改动发给团队</h2><p id="flow-label" class="section-label">第一次参与</p></div>
+            <div class="card-header"><div><p id="flow-label" class="section-label">第一次参与</p><h2 id="flow-title">三步把改动发给团队</h2></div></div>
             <ol class="flow-steps">
               <li><button id="step-login" class="flow-step" type="button" disabled>
-                <span class="step-index" aria-hidden="true">01</span><span class="flow-step-copy"><strong>登录账号</strong><span class="flow-step-action"><span id="step-login-label">登录 GitHub</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
+                <span class="step-index" aria-hidden="true">01</span><span class="flow-step-copy"><strong>登录账号</strong><span>用团队已开通权限的 GitHub 账号登录。</span><span class="flow-step-action"><span id="step-login-label">登录 GitHub</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
               </button></li>
               <li><button id="step-folder" class="flow-step" type="button" disabled>
-                <span class="step-index" aria-hidden="true">02</span><span class="flow-step-copy"><strong>选择 SKILL.md</strong><span class="flow-step-action"><span id="step-folder-label">选择 SKILL.md</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
+                <span class="step-index" aria-hidden="true">02</span><span class="flow-step-copy"><strong>选择 SKILL.md</strong><span>选正在使用的那份 SKILL.md，客户端会记住它所在的文件夹。</span><span class="flow-step-action"><span id="step-folder-label">选择 SKILL.md</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
               </button></li>
               <li><button id="step-review" class="flow-step" type="button" disabled>
-                <span class="step-index" aria-hidden="true">03</span><span class="flow-step-copy"><strong>发给团队审核</strong><span class="flow-step-action"><span id="step-review-label">前往查看改动</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
+                <span class="step-index" aria-hidden="true">03</span><span class="flow-step-copy"><strong>发给团队审核</strong><span>查看本次全部改动，写一句说明，再发送。</span><span class="flow-step-action"><span id="step-review-label">前往查看改动</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
               </button></li>
             </ol>
           </section>
@@ -119,7 +120,12 @@
               </div>
               <details class="advanced"><summary>查看上次要发送的文件</summary><ul id="pending-files" class="pending-files"></ul></details>
             </section>
-            <section id="changes-card" class="card changes-card" aria-labelledby="changes-title">
+            <div id="workspace-tablist" class="workspace-tabs" role="tablist" aria-label="FVA 工作台" hidden>
+              <button id="tab-changes" type="button" role="tab" data-work-tab="changes" aria-selected="true" aria-controls="changes-card">查看改动</button>
+              <button id="tab-review" type="button" role="tab" data-work-tab="review" aria-selected="false" aria-controls="review-card" tabindex="-1">审核进度</button>
+              <button id="tab-updates" type="button" role="tab" data-work-tab="updates" aria-selected="false" aria-controls="team-updates-card" tabindex="-1">更新版本</button>
+            </div>
+            <section id="changes-card" class="card changes-card" role="tabpanel" aria-labelledby="tab-changes" tabindex="0">
               <div class="card-header">
                 <div><p class="section-label">01 / 查看改动</p><h2 id="changes-title" tabindex="-1">查看本次全部改动</h2><p>保存文件后点「刷新改动」。确认清单后，一次发出全部改动。</p></div>
                 <button id="refresh-changes" class="button button-secondary" type="button"><svg class="icon" aria-hidden="true"><use href="#i-refresh"></use></svg>刷新改动</button>
@@ -139,9 +145,9 @@
                 </form>
               </div>
             </section>
-            <section id="review-card" class="card review-card" aria-labelledby="review-title">
+            <section id="review-card" class="card review-card" role="tabpanel" aria-labelledby="tab-review" tabindex="0" hidden>
               <div class="card-header">
-                <div><p class="section-label">02 / 看进度</p><h2 id="review-title">查看审核进度</h2></div>
+                <div><p class="section-label">02 / 看进度</p><h2 id="review-title" tabindex="-1">查看审核进度</h2></div>
                 <button id="check-review" type="button" class="button button-secondary"><svg class="icon" aria-hidden="true"><use href="#i-refresh"></use></svg>刷新审核进度</button>
               </div>
               <div class="review-state"><div class="review-icon"><svg class="icon" aria-hidden="true"><use href="#i-review"></use></svg></div><div><strong id="review-status">尚未查看</strong><p id="review-description">发给团队后，可以在这里查看审核进度。</p></div></div>
@@ -149,7 +155,7 @@
                 <button id="open-review" type="button" class="button button-secondary" data-external="pr" hidden>在浏览器查看审核和留言 <svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button>
               </div>
             </section>
-            <section id="team-updates-card" class="card team-updates-card" aria-labelledby="team-updates-title">
+            <section id="team-updates-card" class="card team-updates-card" role="tabpanel" aria-labelledby="tab-updates" tabindex="0" hidden>
               <div class="card-header">
                 <div><p class="section-label">03 / 团队更新</p><h2 id="team-updates-title" tabindex="-1">更新我的 FVA</h2><p>先看哪些文件会变。确认后会先备份，再更新。</p></div>
                 <button id="update-workspace" type="button" class="button button-secondary"><svg class="icon" aria-hidden="true"><use href="#i-refresh"></use></svg>检查团队更新</button>
@@ -178,10 +184,13 @@
               <dl><dt>正在使用的 FVA</dt><dd id="workspace-path"></dd><dt>后台审核分支</dt><dd id="workspace-branch"></dd></dl>
             </details>
           </div>
+        </div>
 
+        <div id="team-page" class="page" hidden>
+          <div class="page-header"><p class="eyebrow">FVA · 团队项目</p><h1 id="team-heading" tabindex="-1">团队协作</h1><p>查看团队文件、待审核的修改和讨论。</p></div>
           <section id="team-collaboration" class="card team-collaboration" aria-labelledby="team-collaboration-title">
             <div class="card-header">
-              <div><h2 id="team-collaboration-title">团队协作</h2><p>查看团队文件、待审核的修改和讨论。</p></div>
+              <div><h2 id="team-collaboration-title">团队入口</h2></div>
               <button type="button" class="button button-primary" data-external="portalDocs"><svg class="icon" aria-hidden="true"><use href="#i-book"></use></svg>查看项目资料 <svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button>
             </div>
             <div class="project-resources">

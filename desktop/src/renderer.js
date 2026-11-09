@@ -10,6 +10,7 @@ const ended = () => review?.state === 'merged' || review?.state === 'closed';
 const canWork = () => status?.authorized && status.tools?.git && status.tools?.gh;
 const externalButtons = [...document.querySelectorAll('[data-external]')];
 const workButtons = [...document.querySelectorAll('[data-page]')];
+const workTabs = [...document.querySelectorAll('[data-work-tab]')];
 const docFilters = [...document.querySelectorAll('[data-doc-filter]')];
 const docRows = [...document.querySelectorAll('[data-doc-category]')];
 const changeLabels = { added: '新增', modified: '修改', deleted: '删除', A: '新增', M: '修改', D: '删除' };
@@ -41,6 +42,7 @@ let navigationNeedsConfirmation = false;
 let readingNavigation = false;
 let pendingNavigation;
 let docCategory = 'all';
+let activeWorkTab = 'changes';
 
 function message(target, value) {
   say(target, value);
@@ -84,9 +86,7 @@ function render() {
   show('previous-folder', bound && !recovering && (finished || !allowed));
   show('rebind-workspace', bound && !recovering);
   show('workspace-panels', bound || pending);
-  show('changes-card', bound && !recovering);
-  show('review-card', bound && !recovering);
-  show('team-updates-card', bound);
+  renderWorkTabs();
   show('workspace-details', bound);
   show('pending-panel', pending && !recovering);
   show('open-review', Boolean(review?.url || (!review && workspace?.prUrl)));
@@ -189,6 +189,51 @@ function focusWorkflowTarget(target) {
   const destination = id(target);
   destination.focus({ preventScroll: true });
   destination.scrollIntoView({ block: 'start' });
+}
+
+function workTabAvailable(tab) {
+  return Boolean(account()?.bound && (!status?.recoveryRequired || tab.dataset.workTab === 'updates'));
+}
+
+function renderWorkTabs() {
+  const available = workTabs.filter(workTabAvailable);
+  const active = available.find((tab) => tab.dataset.workTab === activeWorkTab) || available[0];
+  show('workspace-tablist', Boolean(active));
+  for (const tab of workTabs) {
+    const selectedTab = tab === active;
+    tab.disabled = !available.includes(tab);
+    tab.tabIndex = selectedTab ? 0 : -1;
+    tab.setAttribute('aria-selected', String(selectedTab));
+    show(tab.getAttribute('aria-controls'), selectedTab);
+  }
+}
+
+function selectWorkTab(name, target) {
+  const tab = workTabs.find((candidate) => candidate.dataset.workTab === name);
+  if (!tab || !workTabAvailable(tab)) return;
+  activeWorkTab = name;
+  renderWorkTabs();
+  if (target) {
+    id(target).focus({ preventScroll: true });
+    id('workspace-tablist').scrollIntoView({ block: 'start' });
+  }
+}
+
+function navigateWorkTabs(event, current) {
+  const { key } = event;
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)) return;
+  const available = workTabs.filter(workTabAvailable);
+  const index = available.indexOf(current);
+  if (index < 0) return;
+  const last = available.length - 1;
+  let next;
+  if (key === 'Home') next = available[0];
+  else if (key === 'End') next = available[last];
+  else if (key === 'ArrowLeft') next = available[index ? index - 1 : last];
+  else next = available[index === last ? 0 : index + 1];
+  event.preventDefault();
+  selectWorkTab(next.dataset.workTab);
+  next.focus({ preventScroll: true });
 }
 
 function focusWorkflowHero() {
@@ -649,6 +694,7 @@ function submit(input) {
     clearPreview();
     if (account()?.bound) {
       await optional(fetchChanges);
+      selectWorkTab('review', id('work-page').hidden ? undefined : 'review-title');
       return '已发给团队审核 #' + result.number + '。可在下方查看进度，团队采用后才进入正式版本。';
     }
     return '上次的改动已发给团队审核 #' + result.number + '。现在可以选择 SKILL.md。';
@@ -708,8 +754,7 @@ function locateTeamUpdates() {
     message('updates-entry-notice', '请先选择现在用的 SKILL.md，再在工作台查看团队更新。');
     return;
   }
-  id('team-updates-title').focus({ preventScroll: true });
-  id('team-updates-card').scrollIntoView({ block: 'start' });
+  selectWorkTab('updates', 'team-updates-title');
 }
 
 function filterDocuments() {
@@ -795,7 +840,7 @@ id('step-folder').addEventListener('click', () => {
   if (!canUseWorkflow() || !guideWorkflowAccess() || guidePendingWork()) return;
   if (updatePreview) {
     notice('请先关闭团队更新预览，再选择 SKILL.md。');
-    focusWorkflowTarget('updates-title');
+    selectWorkTab('updates', 'updates-title');
     return;
   }
   if (!api.bindWorkspace) {
@@ -811,7 +856,7 @@ id('step-review').addEventListener('click', () => {
     focusWorkflowHero();
     return;
   }
-  focusWorkflowTarget('changes-title');
+  selectWorkTab('changes', 'changes-title');
 });
 id('previous-folder').addEventListener('click', openWorkspace);
 id('rebind-workspace').addEventListener('click', bindWorkspace);
@@ -871,6 +916,10 @@ for (const button of externalButtons) {
 }
 for (const button of workButtons) {
   button.addEventListener('click', () => navigate(button.dataset.page, button.textContent.trim()));
+}
+for (const tab of workTabs) {
+  tab.addEventListener('click', () => selectWorkTab(tab.dataset.workTab));
+  tab.addEventListener('keydown', (event) => navigateWorkTabs(event, tab));
 }
 for (const button of document.querySelectorAll('[data-local-view]')) {
   button.addEventListener('click', () => openNavigation(button.dataset.localView));

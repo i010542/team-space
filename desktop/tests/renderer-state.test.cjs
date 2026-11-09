@@ -19,7 +19,7 @@ async function workbench() {
   const timers = new Map();
   let clock = 0;
   let timerId = 0;
-  const calls = { changes: 0, submit: [] };
+  const calls = { changes: 0, updates: 0, submit: [] };
   const overrides = {};
   const workspace = { id: "fixture", bound: true, path: "C:/test/FVA" };
   const change = { path: "SKILL.md", status: "modified", eligible: true, diff: "+ note" };
@@ -61,12 +61,25 @@ async function workbench() {
     closest() { return element("review-state"); }
     contains(node) { return this === node || this.children.some((child) => child.contains(node)); }
     querySelectorAll() { return []; }
+    focus() { document.activeElement = this; }
+    scrollIntoView() {}
   }
 
   function element(name) {
     if (!elements.has(name)) elements.set(name, new Element());
     return elements.get(name);
   }
+
+  const tabs = [
+    ["changes", "changes-card"],
+    ["review", "review-card"],
+    ["updates", "team-updates-card"],
+  ].map(([name, panel]) => {
+    const tab = element("tab-" + name);
+    tab.dataset.workTab = name;
+    tab.setAttribute("aria-controls", panel);
+    return tab;
+  });
 
   const api = {
     status: async () => ({ authenticated: true, authorized: true, tools: { git: true, gh: true }, workspace }),
@@ -79,13 +92,19 @@ async function workbench() {
       calls.submit.push(input);
       return overrides.submit();
     },
+    updateWorkspace: async () => {
+      calls.updates++;
+      return overrides.updateWorkspace();
+    },
+    applyUpdates: async () => { assert.fail("changing tabs must not install an update"); },
     onProgress: () => () => {},
   };
   const document = {
     activeElement: null,
     getElementById: element,
-    querySelectorAll: () => [],
+    querySelectorAll: (selector) => selector === "[data-work-tab]" ? tabs : [],
     createElement: (tagName) => new Element(tagName),
+    createTextNode: (value) => Object.assign(new Element("#text"), { textContent: value }),
     createDocumentFragment: () => new Element(),
   };
   const window = {
@@ -106,9 +125,16 @@ async function workbench() {
   assert.equal(calls.changes, 1, "startup reads one initial snapshot");
   return {
     element, calls, snapshot, overrides,
+    activeElement: () => document.activeElement,
     click(name) {
       const target = element(name);
       if (!target.disabled) return target.handlers.get("click")?.();
+    },
+    key(name, key) {
+      const target = element(name);
+      let prevented = false;
+      target.handlers.get("keydown")({ key, preventDefault() { prevented = true; } });
+      return prevented;
     },
     fillTitle(value) {
       element("submit-title").value = value;
@@ -254,4 +280,54 @@ test("opening a diff preserves each line as text and classifies its visible pref
   toggle.handlers.get("click")();
   toggle.handlers.get("click")();
   assert.equal(details.children.length, 2, "reopening reuses the preview");
+});
+
+test("workspace tabs keep the description, open diff, and update choice without refetching", async () => {
+  const view = await workbench();
+  const visible = () => ["changes-card", "review-card", "team-updates-card"].filter((name) => !view.element(name).hidden);
+  assert.deepEqual(visible(), ["changes-card"]);
+  view.fillTitle("保留这份说明");
+  const row = view.element("file-list").children[0].children[0];
+  row.children[0].children.find((child) => child.tagName === "button").handlers.get("click")();
+  const expandedDiff = row.children[1];
+  assert.equal(expandedDiff.hidden, false);
+
+  view.click("tab-updates");
+  assert.deepEqual(visible(), ["team-updates-card"]);
+  view.overrides.updateWorkspace = () => ({
+    workspace: view.snapshot().workspace,
+    readOnly: true,
+    canApply: true,
+    previewId: "updates-1",
+    files: [{ path: "SKILL.md", status: "conflict", mineText: "本机版", teamText: "团队版" }],
+  });
+  await view.click("update-workspace");
+  assert.equal(view.element("apply-update").disabled, true);
+  const updateRow = view.element("updates-files").children[0].children[0];
+  const option = updateRow.children.find((child) => child.tagName === "fieldset").children[1].children[0];
+  option.checked = true;
+  option.handlers.get("change")();
+  assert.equal(view.element("apply-update").disabled, false);
+
+  assert.equal(view.key("tab-updates", "Home"), true);
+  assert.equal(view.activeElement(), view.element("tab-changes"));
+  assert.deepEqual(visible(), ["changes-card"]);
+  assert.equal(expandedDiff.hidden, false);
+  assert.equal(view.element("file-list").children[0].children[0].children[1], expandedDiff);
+  assert.equal(view.element("submit-title").value, "保留这份说明");
+  assert.equal(view.key("tab-changes", "ArrowRight"), true);
+  assert.deepEqual(visible(), ["review-card"]);
+  assert.equal(view.key("tab-review", "End"), true);
+  assert.deepEqual(visible(), ["team-updates-card"]);
+  assert.equal(view.element("tab-updates").getAttribute("aria-selected"), "true");
+  assert.equal(view.element("tab-updates").tabIndex, 0);
+  assert.equal(view.element("tab-changes").tabIndex, -1);
+  assert.equal(option.checked, true);
+  assert.equal(view.element("apply-update").disabled, false);
+
+  view.focus();
+  assert.deepEqual(visible(), ["team-updates-card"], "a render does not expose the other panels");
+  assert.equal(view.calls.changes, 1);
+  assert.equal(view.calls.updates, 1);
+  assert.equal(view.calls.submit.length, 0);
 });
