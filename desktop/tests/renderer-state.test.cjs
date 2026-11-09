@@ -26,7 +26,8 @@ async function workbench() {
   const snapshot = () => ({ workspace, previewId: "preview-" + calls.changes, files: [change] });
 
   class Element {
-    constructor() {
+    constructor(tagName = "") {
+      this.tagName = tagName;
       this.hidden = false;
       this.disabled = false;
       this.value = "";
@@ -38,6 +39,7 @@ async function workbench() {
       this.renderFailures = 0;
       this.replaceFailures = 0;
     }
+    set innerHTML(_) { throw new Error("diff text must not be rendered as HTML"); }
     get dataset() {
       if (this.renderFailures > 0) {
         this.renderFailures--;
@@ -83,7 +85,7 @@ async function workbench() {
     activeElement: null,
     getElementById: element,
     querySelectorAll: () => [],
-    createElement: () => new Element(),
+    createElement: (tagName) => new Element(tagName),
     createDocumentFragment: () => new Element(),
   };
   const window = {
@@ -215,4 +217,41 @@ test("pending submission stays locked, and cancelling after native focus retains
   assert.equal(view.element("submit-title").value, "整批改动");
   assert.equal(view.element("submit-button").disabled, false);
   assert.match(view.element("error").textContent, /已取消提交/);
+});
+
+test("opening a diff preserves each line as text and classifies its visible prefix", async () => {
+  const view = await workbench();
+  const lines = [
+    "@@ -1,2 +1,3 @@",
+    " unchanged text",
+    "",
+    "-",
+    "-<script>alert(1)</script>",
+    "+",
+    "+++ Text beginning with two plus signs",
+    "+<img src=x onerror=alert(1)>",
+    "… 差异已截断",
+  ];
+  const kinds = ["hunk", "context", "context", "deleted", "deleted", "added", "added", "added", "note"];
+  view.overrides.changes = () => {
+    const data = view.snapshot();
+    return { ...data, files: [{ ...data.files[0], diff: lines.join("\n") }] };
+  };
+  await view.click("refresh-changes");
+  const row = view.element("file-list").children[0].children[0];
+  const toggle = row.children[0].children.find((child) => child.tagName === "button");
+  const details = row.children[1];
+  assert.equal(details.children.length, 1, "hidden previews do not create line elements");
+  toggle.handlers.get("click")();
+  const preview = details.children[1];
+  assert.equal(preview.tagName, "pre");
+  assert.equal(preview.className, "diff-preview");
+  const rows = preview.children[0].children;
+  assert.deepEqual(rows.map((line) => line.tagName), lines.map(() => "span"));
+  assert.deepEqual(rows.map((line) => line.className), kinds.map((kind) => "diff-line diff-" + kind));
+  assert.equal(rows.map((line) => line.textContent).join(""), lines.join("\n"));
+  assert.ok(rows.every((line) => line.children.length === 0), "markup-looking content is plain text");
+  toggle.handlers.get("click")();
+  toggle.handlers.get("click")();
+  assert.equal(details.children.length, 2, "reopening reuses the preview");
 });

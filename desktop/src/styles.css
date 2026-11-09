@@ -161,6 +161,12 @@ button:disabled { cursor: default; opacity: .56; }
 .file-preview { margin: 0 10px 9px; padding: 8px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); }
 .file-preview p { color: var(--muted); font-size: 12px; }
 .file-preview pre { max-height: 210px; margin: 5px 0 0; padding: 1px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: 12px/1.6 var(--mono); user-select: text; }
+.file-preview .diff-preview, .update-file-detail .diff-preview { padding: 0; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+.diff-line { display: block; min-height: 1.6em; padding-inline: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.diff-line.diff-added { background: #e5f5e9; color: #185132; }
+.diff-line.diff-deleted { background: #fce8e7; color: #7c2027; }
+.diff-line.diff-hunk { background: #eef2f7; color: var(--muted); }
+.diff-line.diff-note { color: var(--muted); }
 #submit-form { margin-top: 12px; }
 #submit-form label { display: block; margin-bottom: 4px; font-size: 15px; font-weight: 650; }
 #submit-title { width: 100%; min-height: 42px; padding: 7px 9px; border: 1px solid #c9d6e8; border-radius: 7px; color: var(--text); background: var(--surface); }

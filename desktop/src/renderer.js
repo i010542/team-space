@@ -284,6 +284,29 @@ function element(tag, className, value = '') {
   return node;
 }
 
+function prepareDiffPreview(container, diff, label) {
+  let mounted = false;
+  return () => {
+    if (!diff || mounted) return;
+    const preview = element('pre', 'diff-preview');
+    preview.tabIndex = 0;
+    preview.setAttribute('aria-label', label);
+    const rows = document.createDocumentFragment();
+    const lines = diff.split('\n');
+    for (const [index, line] of lines.entries()) {
+      let kind = 'context';
+      if (line.startsWith('+')) kind = 'added';
+      else if (line.startsWith('-')) kind = 'deleted';
+      else if (line.startsWith('@@')) kind = 'hunk';
+      else if (line === '… 差异已截断') kind = 'note';
+      rows.append(element('span', 'diff-line diff-' + kind, line + (index < lines.length - 1 ? '\n' : '')));
+    }
+    preview.append(rows);
+    container.append(preview);
+    mounted = true;
+  };
+}
+
 function renderFiles(next) {
   preview = next;
   needsRefresh = false;
@@ -315,14 +338,10 @@ function renderFiles(next) {
       details.hidden = true;
       toggle.setAttribute('aria-controls', details.id);
       details.append(element('p', '', file.diff ? '下面列出这个文件的改动。要修改，请回到原文件。' : '这个文件没有可显示的文字改动。'));
-      if (file.diff) {
-        const pre = element('pre', '', file.diff);
-        pre.tabIndex = 0;
-        pre.setAttribute('aria-label', '文件改动预览');
-        details.append(pre);
-      }
+      const showDiff = prepareDiffPreview(details, file.diff, '文件改动预览');
       toggle.addEventListener('click', () => {
         const expanded = details.hidden;
+        if (expanded) showDiff();
         details.hidden = !expanded;
         toggle.setAttribute('aria-expanded', String(expanded));
         toggle.textContent = expanded ? '收起改动' : '看看改了什么';
@@ -557,10 +576,9 @@ function showTeamUpdates(result) {
       row.append(details, conflictChoices(change, index));
     } else if (change.diff) {
       const details = element('details', 'update-file-detail');
-      const text = element('pre', '', change.diff);
-      text.tabIndex = 0;
-      text.setAttribute('aria-label', '文件差异');
-      details.append(element('summary', '', '看看这个文件会怎么改'), text);
+      const showDiff = prepareDiffPreview(details, change.diff, '文件差异');
+      details.append(element('summary', '', '看看这个文件会怎么改'));
+      details.addEventListener('toggle', () => { if (details.open) showDiff(); });
       row.append(details);
     }
     entries.append(row);
