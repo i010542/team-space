@@ -50,7 +50,7 @@
         <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
         <div id="error" class="notice" data-tone="error" role="alert" hidden></div>
         <section id="navigation-request" class="notice navigation-request" aria-labelledby="navigation-message" hidden>
-          <div><p id="navigation-message" role="status"></p><p class="caption">当前填写的内容和选择会保留。</p></div>
+          <div><p id="navigation-message" role="status"></p><p class="caption">已写的修改说明和正在查看的改动会保留。</p></div>
           <div class="actions">
             <button id="dismiss-navigation" class="button button-secondary" type="button">暂不切换</button>
             <button id="accept-navigation" class="button button-primary" type="button">前往</button>
@@ -58,10 +58,9 @@
         </section>
 
         <div id="work-page" class="page">
-          <div class="page-header">
-            <p class="eyebrow">我的 FVA</p>
-            <h1 id="work-heading" tabindex="-1">FVA 共创工作台</h1>
-            <p>修改原来的 FVA 文件，检查后发给团队审核。</p>
+          <div class="page-header work-page-header">
+            <div><p class="eyebrow">我的 FVA</p><h1 id="work-heading" tabindex="-1">FVA 共创工作台</h1><p class="work-intro">修改原来的 FVA 文件，检查后发给团队审核。</p></div>
+            <button id="open-docs" type="button" class="button button-secondary" data-local-view="docs"><svg class="icon" aria-hidden="true"><use href="#i-book"></use></svg>查看文档 <svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button>
           </div>
           <section class="hero" aria-labelledby="action-title">
             <div class="hero-copy">
@@ -106,7 +105,7 @@
                 <span class="step-index" aria-hidden="true">02</span><span class="flow-step-copy"><strong>选 FVA 文件夹</strong><span>选好后，照常用 WorkBuddy 或 Codex 修改并保存。</span><span class="flow-step-action"><span id="step-folder-label">选择文件夹</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
               </button></li>
               <li><button id="step-review" class="flow-step" type="button" disabled>
-                <span class="step-index" aria-hidden="true">03</span><span class="flow-step-copy"><strong>发给团队审核</strong><span>勾选改好的文件，写一句说明，再发送。</span><span class="flow-step-action"><span id="step-review-label">前往选文件</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
+                <span class="step-index" aria-hidden="true">03</span><span class="flow-step-copy"><strong>发给团队审核</strong><span>查看本次全部改动，写一句说明，再发送。</span><span class="flow-step-action"><span id="step-review-label">前往查看改动</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
               </button></li>
             </ol>
           </section>
@@ -120,25 +119,25 @@
                   <button id="recover-workspace" type="button" class="button button-secondary">保留文件，开始新一轮</button>
                 </div>
               </div>
-              <details class="advanced"><summary>查看上次选择的文件</summary><ul id="pending-files" class="pending-files"></ul></details>
+              <details class="advanced"><summary>查看上次要发送的文件</summary><ul id="pending-files" class="pending-files"></ul></details>
             </section>
             <section id="changes-card" class="card changes-card" aria-labelledby="changes-title">
               <div class="card-header">
-                <div><p class="section-label">01 / 选文件</p><h2 id="changes-title" tabindex="-1">选出要发的改动</h2><p>保存文件后点「刷新改动」，勾选这次要发的文件。</p></div>
+                <div><p class="section-label">01 / 查看改动</p><h2 id="changes-title" tabindex="-1">查看本次全部改动</h2><p>保存文件后点「刷新改动」。确认清单后，一次发出全部改动。</p></div>
                 <button id="refresh-changes" class="button button-secondary" type="button"><svg class="icon" aria-hidden="true"><use href="#i-refresh"></use></svg>刷新改动</button>
               </div>
-              <p id="refresh-reminder" class="refresh-reminder" role="status" hidden>文件可能有新改动。请刷新后重新选文件，已写的说明会保留。</p>
+              <p id="refresh-reminder" class="refresh-reminder" role="status" hidden>文件可能有新改动。请刷新后重新查看清单，已写的说明会保留。</p>
               <div id="changes-empty" class="empty-state">
                 <svg class="icon" aria-hidden="true"><use href="#i-file"></use></svg>
                 <div><strong id="changes-empty-title">查看你的改动</strong><p id="changes-empty-description">点「刷新改动」查看可以发给团队的文件。</p></div>
               </div>
               <div id="changes-form" class="changes-form" hidden>
-                <div class="file-list-head"><strong>改动文件</strong><span id="selected-count" role="status" aria-live="polite"></span></div>
+                <div class="file-list-head"><strong>全部改动文件</strong><span id="batch-count" role="status" aria-live="polite"></span></div>
                 <ul id="file-list" class="file-list"></ul>
                 <form id="submit-form">
                   <label for="submit-title">写一句修改说明</label>
                   <input id="submit-title" name="title" maxlength="120" placeholder="例如：补充开头两秒的镜头提示" autocomplete="off" required>
-                  <div class="submit-footer"><p class="caption" id="submit-hint">团队审核并采用后，改动才进入正式版本。</p><button id="submit-button" class="button button-primary" type="submit" aria-describedby="submit-hint" disabled>发给团队审核 <svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button></div>
+                  <div class="submit-footer"><p class="caption" id="submit-hint">全部改动会一并发送，包括删除。</p><button id="submit-button" class="button button-primary" type="submit" aria-describedby="submit-hint" disabled>发给团队审核 <svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button></div>
                 </form>
               </div>
             </section>
@@ -246,14 +245,14 @@
             <ol class="help-list">
               <li><span class="step-index">01</span><div><strong>用团队账号登录</strong><p>GitHub 是团队保存文件和审核改动的地方。在工作台点「登录 GitHub」，按浏览器提示完成登录。</p></div></li>
               <li><span class="step-index">02</span><div><strong>选择现在用的 FVA 文件夹</strong><p>选择打开后就能看到 SKILL.md 的文件夹。客户端会记住它。以后仍在原处用 WorkBuddy 或 Codex 改文件。</p></div></li>
-              <li><span class="step-index">03</span><div><strong>选文件，发给团队审核</strong><p>保存后回到工作台，点「刷新改动」。勾选这次要发的文件，写一句说明，再点「发给团队审核」。</p></div></li>
+              <li><span class="step-index">03</span><div><strong>查看改动，发给团队审核</strong><p>保存后回到工作台，点「刷新改动」。检查全部改动，包括删除。写一句说明，再点「发给团队审核」。</p></div></li>
               <li><span class="step-index">04</span><div><strong>看审核进度，按需更新</strong><p>点「刷新审核进度」看结果。要更新自己的 FVA，先看哪些文件会变，再确认。需要时可以恢复更新前的文件。</p></div></li>
             </ol>
           </section>
           <section class="card help-card" aria-labelledby="questions-title">
             <div class="card-header"><div><h2 id="questions-title">常见问题</h2></div></div>
             <details><summary>为什么进不了项目或发不了改动？</summary><p>请确认浏览器和客户端都在用团队已开通权限的 GitHub 账号。仍有问题时，请联系项目负责人。</p></details>
-            <details><summary>为什么有些文件不能勾选？</summary><p>请看文件旁的原因。项目只接收支持的文件，密码、密钥和个人资料请留在本机。</p></details>
+            <details><summary>为什么这一批改动发不出去？</summary><p>一次发送必须包含这次的全部改动。有文件不能发送时，请看文件旁的原因，处理后再刷新。一次最多发送 100 个文件。</p></details>
             <details><summary>刚选好文件夹，为什么已经有改动？</summary><p>客户端会拿你的文件和团队当时的版本对照。之前改过的文件也会列出。从来没有安装过的文件不会算作你删除了它。</p></details>
             <details><summary>选了「保留我的版本」，怎样继续发送？</summary><p>先在原文件中补上你需要的团队改动，再检查更新。如仍需选择，选「保留我的版本」并确认更新。</p></details>
             <details><summary>怎么知道团队采用了我的改动？</summary><p>审核进度显示「已采用」时，改动已经进入团队正式版本。刚发出时，请等团队审核。</p></details>

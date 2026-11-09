@@ -127,7 +127,7 @@ function wire() {
             if (!input || typeof input.title !== 'string' || !Array.isArray(input.files) || input.files.length > 100 || typeof input.previewId !== 'string') throw new Error('请先刷新改动并填写修改说明。');
             title = input.title; count = input.files.length;
           }
-          const answer = await dialog.showMessageBox(window, {type:'question',title:'发给团队审核',message:input?.retry ? '继续发送上次没发完的修改，请团队审核？' : '将选中的修改发给团队，请大家审核？',detail:title.slice(0,200) + '\n\n共 ' + count + ' 个文件。修改会通过 GitHub 发给团队，审核并采纳后才会进入团队正式版本。',buttons:['取消','发给团队审核'],defaultId:0,cancelId:0,noLink:true});
+          const answer = await dialog.showMessageBox(window, {type:'question',title:'发给团队审核',message:input?.retry ? '继续发送上次没发完的修改，请团队审核？' : '将本次检查到的全部修改发给团队，请大家审核？',detail:title.slice(0,200) + '\n\n共 ' + count + ' 个文件。修改会通过 GitHub 发给团队，审核并采纳后才会进入团队正式版本。',buttons:['取消','发给团队审核'],defaultId:0,cancelId:0,noLink:true});
           if (answer.response !== 1) throw new Error('已取消提交，文件保持原样。');
           value = await service.submit(input.retry === true ? retryInput : input);
         } else value = await service[name]();

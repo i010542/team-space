@@ -27,7 +27,6 @@ let preview;
 let busy = '';
 let primary = '';
 let selected = new Set();
-let checkboxes = [];
 let summaries = [];
 let deviceOpening = false;
 let focusTimer;
@@ -122,7 +121,7 @@ function render() {
       '还是用同一个 FVA 文件夹。改好后，再发给团队审核。', 'start', '开始下一轮修改');
   } else {
     hero('已记住 FVA 文件夹', '在原处修改 FVA',
-      '用 WorkBuddy 或 Codex 改好并保存。回到这里选文件，发给团队审核。', 'open', '打开 FVA 文件夹',
+      '用 WorkBuddy 或 Codex 改好并保存。回到这里查看全部改动，再发给团队审核。', 'open', '打开 FVA 文件夹',
       pending ? '换文件夹前，请先继续发送，或保留文件再开始新一轮。' : '');
   }
 
@@ -133,7 +132,7 @@ function render() {
   const shownState = review?.state;
   const stateText = {
     none: ['还没有发给团队审核', '发送后，可以在这里查看审核进度。'],
-    open: ['审核中', '可以在浏览器查看留言。需要补充时，再选文件发给团队。'],
+    open: ['审核中', '可以在浏览器查看留言。需要补充时，改好原文件，再发给团队。'],
     merged: ['已采用', '这次改动已经进入团队正式版本。'],
     closed: ['审核已结束', '这次改动未进入团队正式版本。']
   };
@@ -164,7 +163,7 @@ function render() {
     say('changes-empty-title', '查看你的改动');
     say('changes-empty-description', '点「刷新改动」查看可以发给团队的文件。');
   }
-  updateSelection();
+  renderSubmissionControls();
   renderWorkflow();
   renderUpdateControls();
   renderNavigation();
@@ -180,7 +179,7 @@ function renderWorkflow() {
   say('step-folder-label', accessLabel || (workspace?.pending ? '先处理上次改动'
     : updatePreview ? '先关闭更新预览' : workspace?.bound ? '已选择 · 更换文件夹' : '选择文件夹'));
   say('step-review-label', accessLabel || (workspace?.pending ? '先处理上次改动'
-    : workspace?.bound ? '前往选文件' : '先选文件夹'));
+    : workspace?.bound ? '前往查看改动' : '先选文件夹'));
   for (const step of ['step-login', 'step-folder', 'step-review']) disable(step, blocked);
 }
 
@@ -216,24 +215,26 @@ function guidePendingWork() {
   return true;
 }
 
-function updateSelection() {
+function renderSubmissionControls() {
   const blocked = Boolean(busy || !canWork() || ended() || account()?.pending || updatePreview || status?.recoveryRequired);
-  const count = selected.size;
-  const hasEligible = preview?.files.some((file) => file.eligible);
-  for (const [checkbox, file] of checkboxes) {
-    checkbox.disabled = Boolean(blocked || !file.eligible || (!checkbox.checked && count >= 100));
-  }
-  disable('submit-title', blocked || !hasEligible);
-  disable('submit-button', blocked || needsRefresh || !preview || count === 0 || !id('submit-title').value.trim());
-  say('selected-count', '已选 ' + count + ' 个文件' + (count === 100 ? ' · 已达本次上限' : ''));
-  let hint = '团队审核并采用后，改动才进入正式版本。';
+  const files = preview?.files || [];
+  const count = files.length;
+  const cannotSend = count - selected.size;
+  const deletions = files.filter((file) => file.status === 'deleted' || file.status === 'D').length;
+  disable('submit-title', blocked || count === 0);
+  disable('submit-button', blocked || needsRefresh || count === 0 || count > 100 || cannotSend > 0 || !id('submit-title').value.trim());
+  say('batch-count', count + ' 个文件' + (deletions ? ' · ' + deletions + ' 个已删除' : '') +
+    (cannotSend ? ' · ' + cannotSend + ' 个暂不能发送' : ''));
+  let hint = '全部改动会一并发送，包括删除。团队采用后才进入正式版本。';
   if (status?.recoveryRequired) hint = '请先恢复更新前版本。';
   else if (updatePreview) hint = '请先完成或关闭团队更新预览。';
   else if (account()?.pending) hint = '请先处理上次没发完的改动。';
   else if (ended()) hint = '本轮审核已结束。请开始下一轮修改。';
-  else if (needsRefresh) hint = '请先刷新改动，再选这次要发的文件。';
-  else if (!hasEligible) hint = '暂时没有可以发送的文件。';
-  else if (review?.state === 'open') hint = '这次选的文件会发到当前审核中。';
+  else if (needsRefresh) hint = '请先刷新并重新查看本次全部改动。';
+  else if (count > 100) hint = '本次有 ' + count + ' 个改动文件，超过 100 个上限，整批暂不能发送。请整理后刷新。';
+  else if (cannotSend) hint = '有 ' + cannotSend + ' 个文件暂不能发送，整批会暂停。请按清单中的原因处理后再刷新。';
+  else if (count === 0) hint = '暂时没有要发送的改动。';
+  else if (review?.state === 'open') hint = '全部改动会一并发到当前审核，包括删除。';
   say('submit-hint', hint);
 }
 
@@ -251,8 +252,8 @@ function setWorkspace(workspace) {
   pendingFiles.replaceChildren();
   if (workspace?.pending) {
     say('pending-description', workspace.pendingTitle
-      ? '上次的改动「' + workspace.pendingTitle + '」已保留。继续发送时不用重新选文件。'
-      : '上次的改动已保留。继续发送时不用重新选文件。');
+      ? '上次的改动「' + workspace.pendingTitle + '」已保留。继续发送时沿用上次的文件清单。'
+      : '上次的改动已保留。继续发送时沿用上次的文件清单。');
     for (const path of workspace.pendingFiles || []) {
       const item = document.createElement('li');
       item.textContent = path;
@@ -271,7 +272,6 @@ function clearPreview() {
   preview = undefined;
   needsRefresh = false;
   selected.clear();
-  checkboxes = [];
   summaries = [];
   id('file-list').replaceChildren();
 }
@@ -286,28 +286,14 @@ function element(tag, className, value = '') {
 function renderFiles(next) {
   preview = next;
   needsRefresh = false;
-  selected = new Set();
-  checkboxes = [];
+  selected = new Set(next.files.filter((file) => file.eligible).map((file) => file.path));
   summaries = [];
   const fragment = document.createDocumentFragment();
 
   next.files.forEach((file, i) => {
     const row = element('li', 'file-row');
     const main = element('div', 'file-main');
-    const selection = element('div', 'file-selection');
-    const checkbox = element('input');
-    checkbox.type = 'checkbox';
-    checkbox.id = 'file-select-' + i;
-    const label = element('label', '', file.path);
-    label.htmlFor = checkbox.id;
-    checkbox.addEventListener('change', () => {
-      if (checkbox.checked) selected.add(file.path);
-      else selected.delete(file.path);
-      updateSelection();
-    });
-    checkboxes.push([checkbox, file]);
-    selection.append(checkbox, label);
-    main.append(selection);
+    main.append(element('code', 'file-name', file.path));
     const stateTag = element('span', 'file-state', file.eligible ? (changeLabels[file.status] || '改动') : '暂不能发送');
     stateTag.dataset.status = file.eligible ? file.status : 'blocked';
     main.append(stateTag);
@@ -316,7 +302,7 @@ function renderFiles(next) {
     if (!file.eligible) {
       const reason = element('p', 'file-reason', file.reason || '这个文件不在团队接收的范围内。');
       reason.id = 'file-reason-' + i;
-      checkbox.setAttribute('aria-describedby', reason.id);
+      row.setAttribute('aria-describedby', reason.id);
       row.append(reason);
     } else {
       const toggle = element('button', 'button button-secondary summary-button', '看看改了什么');
@@ -599,20 +585,19 @@ function refreshOnFocus() {
   }
   const canRefresh = () => !busy && canWork() && account()?.bound && !account().pending &&
     !updatePreview && !status?.recoveryRequired && !id('work-page').hidden;
-  const hasDraft = () => selected.size || id('submit-title').value || id('file-list').contains(document.activeElement);
   const markStale = () => {
     needsRefresh = true;
     render();
   };
   clearTimeout(focusTimer);
   if (!canRefresh()) return;
-  if (hasDraft()) {
+  if (hasChangeDraft()) {
     markStale();
     return;
   }
   focusTimer = setTimeout(() => {
     if (!canRefresh()) return;
-    if (hasDraft()) markStale();
+    if (hasChangeDraft()) markStale();
     else run('读取本机改动', fetchChanges);
   }, 350);
 }
@@ -656,8 +641,13 @@ function navigate(page, label) {
   window.scrollTo(0, 0);
 }
 
+function hasChangeDraft() {
+  return Boolean(id('submit-title').value || id('file-list').contains(document.activeElement) ||
+    summaries.some((button) => button.getAttribute('aria-expanded') === 'true'));
+}
+
 function hasNavigationDraft() {
-  return Boolean(selected.size || id('submit-title').value || updatePreview);
+  return hasChangeDraft() || Boolean(updatePreview);
 }
 
 function renderNavigation() {
@@ -790,7 +780,7 @@ id('step-folder').addEventListener('click', () => {
 id('step-review').addEventListener('click', () => {
   if (!canUseWorkflow() || !guideWorkflowAccess() || guidePendingWork()) return;
   if (!account()?.bound) {
-    notice('请先选择现在用的 FVA 文件夹，再选要发给团队的文件。');
+    notice('请先选择现在用的 FVA 文件夹，再查看要发给团队的改动。');
     focusWorkflowHero();
     return;
   }
@@ -798,12 +788,8 @@ id('step-review').addEventListener('click', () => {
 });
 id('previous-folder').addEventListener('click', openWorkspace);
 id('rebind-workspace').addEventListener('click', bindWorkspace);
-id('refresh-changes').addEventListener('click', () => run('读取本机改动', async () => {
-  const hasSelection = selected.size > 0;
-  await fetchChanges();
-  if (hasSelection && preview.files.length) return '改动已刷新，请重新选这次要发的文件。';
-}));
-id('submit-title').addEventListener('input', updateSelection);
+id('refresh-changes').addEventListener('click', () => run('读取本机改动', fetchChanges));
+id('submit-title').addEventListener('input', renderSubmissionControls);
 id('submit-form').addEventListener('submit', (event) => {
   event.preventDefault();
   if (id('submit-button').disabled) return;
@@ -816,7 +802,7 @@ id('recover-workspace').addEventListener('click', () => run('另开审核任务'
   await optional(fetchStatus);
   if (account()?.bound) {
     await optional(fetchChanges);
-    return '可以开始下一轮了。继续用原来的 FVA 文件夹，并重新选要发的文件。';
+    return '可以开始下一轮了。继续用原来的 FVA 文件夹，并查看本次全部改动。';
   }
   return '旧文件已保留在 ' + previousPath + '。现在可以选择 FVA 文件夹。';
 }));

@@ -689,7 +689,7 @@ function createService({ root, gitPath, ghPath, run = runProcess }) {
       throw new Error("请输入 1–120 个字符的审核标题。");
     }
     if (!Array.isArray(files) || files.length < 1 || files.length > 100 || files.some((file) => pathProblem(file))) {
-      throw new Error("请选择 1–100 个有效文件。");
+      throw new Error("本次发送需要包含 1–100 个有效的改动文件，请刷新改动后重试。");
     }
     if (new Set(files.map(windowsPathKey)).size !== files.length) {
       throw new Error("不能重复选择同一路径。");
@@ -707,7 +707,7 @@ function createService({ root, gitPath, ghPath, run = runProcess }) {
       const current = await snapshot(cwd, head, file, { source });
       if (preview.fingerprints.get(file) !== current.fingerprint) throw new Error("预览后的文件已变化，请重新检查改动。");
       submissionBytes += current.bytes?.length ?? 0;
-      if (submissionBytes > maxSubmissionBytes) throw new Error("选中文件总大小超过 10 MB，请分批提交。");
+      if (submissionBytes > maxSubmissionBytes) throw new Error("本次改动总大小超过 10 MB，暂时无法全部发送。请联系项目负责人处理。");
       snapshots.push(current);
     }
     const commit = await buildCommit(cwd, head, account, title.trim(), snapshots);
