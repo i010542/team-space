@@ -345,17 +345,16 @@ async function fetchChanges() {
       progress.hidden = false;
     }
   }, 15000);
-  let next;
   try {
-    next = await api.changes();
+    const next = await api.changes();
+    setWorkspace(next.workspace);
+    renderFiles(next);
   } catch (error) {
     clearPreview();
     throw error;
   } finally {
     clearTimeout(wait);
   }
-  setWorkspace(next.workspace);
-  renderFiles(next);
 }
 
 async function optional(operation) {

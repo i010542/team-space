@@ -36,6 +36,7 @@ async function workbench() {
       this.children = [];
       this.values = {};
       this.renderFailures = 0;
+      this.replaceFailures = 0;
     }
     get dataset() {
       if (this.renderFailures > 0) {
@@ -48,7 +49,13 @@ async function workbench() {
     setAttribute(name, value) { this.attributes.set(name, value); }
     getAttribute(name) { return this.attributes.get(name) || null; }
     append(...nodes) { this.children.push(...nodes); }
-    replaceChildren(...nodes) { this.children = nodes; }
+    replaceChildren(...nodes) {
+      if (this.replaceFailures > 0) {
+        this.replaceFailures--;
+        throw new Error("simulated file list drawing failure");
+      }
+      this.children = nodes;
+    }
     closest() { return element("review-state"); }
     contains(node) { return this === node || this.children.some((child) => child.contains(node)); }
     querySelectorAll() { return []; }
@@ -167,6 +174,23 @@ test("a render exception before an operation leaves the controls available for r
   assert.equal(view.element("refresh-changes").disabled, false);
   await view.click("refresh-changes");
   assert.equal(view.calls.changes, 2);
+});
+
+test("an undisplayed change list cannot be submitted after the read succeeds", async () => {
+  const view = await workbench();
+  view.fillTitle("保留这份说明");
+  assert.equal(view.element("submit-button").disabled, false);
+  view.element("file-list").replaceFailures = 1;
+  await view.click("refresh-changes");
+  assert.equal(view.calls.changes, 2);
+  assert.equal(view.element("changes-form").hidden, true);
+  assert.equal(view.element("submit-button").disabled, true);
+  assert.equal(view.element("submit-title").value, "保留这份说明");
+  view.submit();
+  assert.equal(view.calls.submit.length, 0);
+  await view.click("refresh-changes");
+  assert.equal(view.calls.changes, 3);
+  assert.equal(view.element("submit-button").disabled, false);
 });
 
 test("pending submission stays locked, and cancelling after native focus retains its draft", async () => {
