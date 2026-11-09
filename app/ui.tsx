@@ -121,25 +121,25 @@ export function BranchArt() {
     <svg className="branch-art" viewBox="0 0 420 258" fill="none" aria-hidden="true">
       <defs>
         <pattern id="branch-grid" width="24" height="24" patternUnits="userSpaceOnUse">
-          <circle cx="1" cy="1" r="1" fill="#d6e3b6" fillOpacity=".28" />
+          <circle cx="1" cy="1" r="1" fill="#8eabe0" fillOpacity=".28" />
         </pattern>
         <linearGradient id="art-fade"><stop stopColor="#fff" stopOpacity="0" /><stop offset=".24" stopColor="#fff" /><stop offset=".92" stopColor="#fff" /><stop offset="1" stopColor="#fff" stopOpacity="0" /></linearGradient>
         <mask id="grid-mask"><rect width="420" height="258" fill="url(#art-fade)" /></mask>
       </defs>
       <rect width="420" height="258" fill="url(#branch-grid)" mask="url(#grid-mask)" />
-      <path d="M47 165H369" stroke="#9eb387" strokeOpacity=".44" />
-      <path d="M97 165C131 165 126 97 162 97H244C277 97 268 165 310 165" stroke="#c7db98" strokeWidth="2" />
-      <path d="M97 165H313" stroke="#c7db98" strokeWidth="2" strokeOpacity=".69" />
-      <circle cx="97" cy="165" r="6" fill="#263b30" stroke="#d4e6aa" strokeWidth="2" />
-      <circle cx="173" cy="97" r="6" fill="#263b30" stroke="#d4e6aa" strokeWidth="2" />
-      <circle cx="310" cy="165" r="15" fill="#d4e6aa" fillOpacity=".13" />
-      <circle cx="310" cy="165" r="7" fill="#d4e6aa" />
-      <rect x="197" y="78" width="68" height="37" rx="9" fill="#344c3e" stroke="#749269" />
-      <path d="M209 90v14m0-10c0 4 8 0 8 5m-2 4 2 2 2-2" stroke="#d4e6aa" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-      <text x="226" y="101" fill="#e3eccd" fontFamily="monospace" fontSize="12" letterSpacing="1">PR</text>
-      <text x="144" y="71" fill="#c2d1b2" fontFamily="monospace" fontSize="11" letterSpacing="1">branch</text>
-      <text x="83" y="194" fill="#c2d1b2" fontFamily="monospace" fontSize="11" letterSpacing="1">main</text>
-      <text x="290" y="194" fill="#c2d1b2" fontFamily="monospace" fontSize="11" letterSpacing="1">merge</text>
+      <path d="M47 165H369" stroke="#a0b6de" strokeOpacity=".44" />
+      <path d="M97 165C131 165 126 97 162 97H244C277 97 268 165 310 165" stroke="#2563eb" strokeWidth="2" />
+      <path d="M97 165H313" stroke="#2563eb" strokeWidth="2" strokeOpacity=".69" />
+      <circle cx="97" cy="165" r="6" fill="#fff" stroke="#2563eb" strokeWidth="2" />
+      <circle cx="173" cy="97" r="6" fill="#fff" stroke="#2563eb" strokeWidth="2" />
+      <circle cx="310" cy="165" r="15" fill="#2563eb" fillOpacity=".13" />
+      <circle cx="310" cy="165" r="7" fill="#2563eb" />
+      <rect x="197" y="78" width="68" height="37" rx="9" fill="#f9fbff" stroke="#9bb9f0" />
+      <path d="M209 90v14m0-10c0 4 8 0 8 5m-2 4 2 2 2-2" stroke="#2563eb" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+      <text x="226" y="101" fill="#1d4ed8" fontFamily="monospace" fontSize="12" letterSpacing="1">PR</text>
+      <text x="144" y="71" fill="#415b89" fontFamily="monospace" fontSize="11" letterSpacing="1">branch</text>
+      <text x="83" y="194" fill="#415b89" fontFamily="monospace" fontSize="11" letterSpacing="1">main</text>
+      <text x="290" y="194" fill="#415b89" fontFamily="monospace" fontSize="11" letterSpacing="1">merge</text>
     </svg>
   );
 }
