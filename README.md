@@ -4,9 +4,9 @@
 
 ## Windows 客户端
 
-[下载 0.1.0 预览版](https://github.com/i010542/team-space/releases/download/desktop-v0.1.0/Team-Space-0.1.0-Setup.exe) · [客户端说明与源码](desktop/README.md)
+[下载 0.3.0 预览版](https://github.com/i010542/team-space/releases/download/desktop-v0.3.0/Team-Space-0.3.0-Setup.exe) · [客户端说明与源码](desktop/README.md)
 
-成员可以直接使用客户端登录 GitHub、准备个人工作文件夹、查看改动并提交审核，不需要安装 GitHub Desktop 或输入命令。当前接入 FVA；安装包自带所需工具。下面的 Node.js 与构建步骤仅供维护网站的开发者使用。
+成员可以直接使用客户端登录 GitHub、绑定正在使用的 FVA 文件夹、查看改动并提交审核，也可比较团队更新、处理冲突后备份并更新本机文件，不需要安装 GitHub Desktop 或输入命令。当前接入 FVA；安装包自带所需工具。下面的 Node.js 与构建步骤仅供维护网站的开发者使用。
 
 - 在 `app/catalog.ts` 维护项目和资料索引。增添项目时，补充项目详情路由。
 - FVA 的原始资料由私有 GitHub 仓库提供，查看原文需要仓库权限。

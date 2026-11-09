@@ -25,7 +25,7 @@ export default function Home() {
           {projects.map((project) => <ProjectCard key={project.id} project={project} />)}
         </section>
         <section aria-label="团队协作流程">
-          <SectionHeading title="团队协作" href="/guide" link="完整指南">在客户端编辑、核对并提交文件。</SectionHeading>
+          <SectionHeading title="团队协作" href="/guide" link="完整指南">使用原来的 Skill 文件夹，核对并提交改动。</SectionHeading>
           <div className="workflow-card card">
             <div className="workflow-intro"><span className="doc-icon"><GitPullRequest size={17} aria-hidden /></span><strong>从安装到提交审核</strong></div>
             <ol className="workflow-list">

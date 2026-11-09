@@ -1,7 +1,7 @@
 export const repo = "https://github.com/i010542/fva";
 export const defaultBranch = "main";
 export const websiteSource = "https://github.com/i010542/team-space";
-export const desktopDownload = websiteSource + "/releases/download/desktop-v0.1.0/Team-Space-0.1.0-Setup.exe";
+export const desktopDownload = websiteSource + "/releases/download/desktop-v0.3.0/Team-Space-0.3.0-Setup.exe";
 
 export const projects = [
   {
@@ -62,6 +62,6 @@ export type DocumentEntry = (typeof documents)[number];
 
 export const steps = [
   { title: "安装并登录", short: "使用有仓库权限的账号", description: "下载并运行安装程序，打开客户端后登录 GitHub。请使用有 FVA 仓库写入权限的账号。" },
-  { title: "打开工作区并修改", short: "在本地修改 Skill", description: "点击「开始参与」，客户端会创建个人工作区和分支。点击「打开文件夹」，用熟悉的编辑器或 AI 工具修改文件。" },
+  { title: "绑定使用中的 FVA", short: "边使用边修改", description: "选择正在使用、直接包含 SKILL.md 的 FVA 文件夹。继续在 WorkBuddy、Codex 等工具中使用和修改原文件；绑定不会搬动或覆盖文件，个人分支在后台管理。" },
   { title: "选择改动并提交", short: "发送给项目维护者审核", description: "回到客户端刷新改动，查看差异并勾选本次要提交的文件，填写修改说明，然后点击「提交审核」。客户端将选中的改动推送到个人分支并创建 PR，由维护者审核合并。" },
 ];

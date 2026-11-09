@@ -6,8 +6,10 @@ const call = (method, input) => ipcRenderer.invoke('team-space:' + method, input
 contextBridge.exposeInMainWorld('teamSpace', Object.freeze({
   status: () => call('status'), login: () => call('login'),
   startWorkspace: () => call('startWorkspace'), changes: () => call('changes'),
+  bindWorkspace: () => call('bindWorkspace'),
   submit: input => call('submit', input), openWorkspace: () => call('openWorkspace'),
   updateWorkspace: () => call('updateWorkspace'), recoverWorkspace: () => call('recoverWorkspace'), reviewStatus: () => call('reviewStatus'),
+  applyUpdates: input => call('applyUpdates', input), restoreUpdate: input => call('restoreUpdate', input),
   openExternal: key => call('openExternal', key),
   onProgress: callback => {
     if (typeof callback !== 'function') return () => {};

@@ -21,7 +21,7 @@ export default function Guide() {
           </ol>
         </section>
         <aside className="card review-card" aria-label="客户端入口">
-          <SectionHeading title="Windows 客户端">当前支持 FVA 项目和不超过 1 MB 的 UTF-8 文本文件。</SectionHeading>
+          <SectionHeading title="Windows 客户端">绑定正在使用的 FVA，支持单个不超过 1 MB 的 UTF-8 文本文件。检查团队更新后，可选择冲突内容，备份并更新自己的 FVA；也可恢复更新前的文件。</SectionHeading>
           <DesktopDownload />
           <div className="guide-source">
             <External href={websiteSource} className="quiet-link">查看网站源码<ArrowUpRight size={14} aria-hidden /></External>

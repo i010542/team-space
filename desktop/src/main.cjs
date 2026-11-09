@@ -4,7 +4,7 @@ const { pathToFileURL } = require('node:url');
 const { createService } = require('./core.cjs');
 protocol.registerSchemesAsPrivileged([{ scheme: 'teamspace', privileges: { standard: true, secure: true, supportFetchAPI: false } }]);
 app.setName('Team Space');
-let window, service, busy = false;
+let window, service, busy = false, updatePreview = null;
 const pages = new Set(['/index.html', '/styles.css', '/renderer.js']);
 const external = Object.freeze({
   repository: 'https://github.com/i010542/fva',
@@ -14,7 +14,7 @@ const external = Object.freeze({
   changelog: 'https://github.com/i010542/fva/blob/main/CHANGELOG.md',
   device: 'https://github.com/login/device'
 });
-const mutators = new Set(['login', 'startWorkspace', 'submit', 'updateWorkspace', 'recoverWorkspace']);
+const mutators = new Set(['login', 'startWorkspace', 'submit', 'updateWorkspace', 'recoverWorkspace', 'bindWorkspace', 'applyUpdates', 'restoreUpdate']);
 function safeError(error) {
   return String(error?.message || '操作未完成，请重试。')
     .replace(/(?:gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+)/g, '[已隐藏]')
@@ -28,7 +28,7 @@ function trusted(event) {
   } catch { return false; }
 }
 function wire() {
-  for (const name of ['status','login','startWorkspace','changes','submit','openWorkspace','updateWorkspace','recoverWorkspace','reviewStatus','openExternal']) {
+  for (const name of ['status','login','startWorkspace','bindWorkspace','changes','submit','openWorkspace','updateWorkspace','applyUpdates','restoreUpdate','recoverWorkspace','reviewStatus','openExternal']) {
     ipcMain.handle('team-space:' + name, async (event, input) => {
       if (!trusted(event)) return {ok:false,error:'不允许的页面请求。'};
       if (busy && !(name === 'openExternal' && input === 'device')) return {ok:false,error:'正在处理上一项操作，请稍候。'};
@@ -53,8 +53,40 @@ function wire() {
           value = await service.login(progress => {
             if (!window?.isDestroyed()) window.webContents.send('team-space:progress', progress);
           });
+        } else if (name === 'bindWorkspace') {
+          const selected = await dialog.showOpenDialog(window, {title:'选择正在使用的 FVA 文件夹（直接包含 SKILL.md）',properties:['openDirectory'],buttonLabel:'选择这份 FVA'});
+          if(selected.canceled || selected.filePaths.length !== 1) return {ok:true,value:null};
+          const answer = await dialog.showMessageBox(window,{type:'question',title:'绑定正在使用的 FVA',message:'从这个文件夹读取日常修改并提交审核？',detail:selected.filePaths[0]+'\n\n不会搬动、覆盖这里的文件，也不会在这里初始化 Git。首次会与当前团队版本比较；提交前仍需选择文件和确认。',buttons:['取消','绑定此文件夹'],defaultId:0,cancelId:0,noLink:true});
+          if(answer.response!==1)return {ok:true,value:null};
+          value=await service.bindWorkspace(selected.filePaths[0]);
+        } else if (name === 'updateWorkspace') {
+          updatePreview = null;
+          value = await service.updateWorkspace();
+          if (value.previewId) updatePreview = value;
+        } else if (name === 'applyUpdates') {
+          if (!input || typeof input.previewId !== 'string' || !updatePreview || input.previewId !== updatePreview.previewId) throw new Error('更新预览已过期，请重新检查团队更新。');
+          if (!updatePreview.canApply) throw new Error(updatePreview.blockedReason || '当前不能应用更新。');
+          const choices = input.resolutions;
+          if (!choices || typeof choices !== 'object' || Array.isArray(choices) || Object.keys(choices).length > 500 || Object.values(choices).some(choice => choice !== 'mine' && choice !== 'team')) throw new Error('请为每个冲突选择保留本机或团队内容。');
+          const current = await service.status();
+          if (!current.workspace?.bound || current.workspace.id !== updatePreview.workspace.id || current.recoveryRequired) throw new Error('工作目录已变化或需要恢复，请重新检查。');
+          const conflicts = updatePreview.files.filter(file => file.status === 'conflict');
+          if (conflicts.some(file => !Object.hasOwn(choices, file.path)) || Object.keys(choices).some(name => !conflicts.some(file => file.path === name))) throw new Error('请完成所有冲突选择，再应用更新。');
+          const selectedTeam = Object.values(choices).filter(choice => choice === 'team').length;
+          const answer = await dialog.showMessageBox(window, {type:'question', title:'更新我的 FVA', message:'先备份，再将确认的更新应用到正在使用的 FVA？', detail:current.workspace.path + '\n\n冲突处理：' + selectedTeam + ' 项使用团队内容，' + (conflicts.length - selectedTeam) + ' 项保留本机内容。\n请先保存文件，并在更新完成前暂停编辑。预览后发生变化的文件会阻止本次更新。', buttons:['取消','备份并更新'], defaultId:0, cancelId:0, noLink:true});
+          if (answer.response !== 1) throw new Error('已取消更新，使用中的文件保持原样。');
+          value = await service.applyUpdates({previewId:input.previewId,resolutions:choices});
+          updatePreview = null;
+        } else if (name === 'restoreUpdate') {
+          if (!input || typeof input.backupId !== 'string') throw new Error('请选择可恢复的更新备份。');
+          const current = await service.status();
+          if (current.lastBackup?.id !== input.backupId) throw new Error('备份已变化，请刷新工作台。');
+          const answer = await dialog.showMessageBox(window, {type:'question', title:'恢复更新前的 FVA', message:'将这次更新涉及的文件恢复到更新前？', detail:'备份时间：' + current.lastBackup.createdAt + '\n\n恢复前会检查文件。如果更新后又有修改，将停止恢复并保留现有文件。请在恢复完成前暂停编辑。', buttons:['取消','恢复更新前的文件'], defaultId:0, cancelId:0, noLink:true});
+          if (answer.response !== 1) throw new Error('已取消恢复。');
+          value = await service.restoreUpdate({backupId:input.backupId});
+          updatePreview = null;
         } else if (name === 'recoverWorkspace') {
-          const answer = await dialog.showMessageBox(window,{type:'question',title:'保留旧文件并另开任务',message:'保留当前文件夹，并从团队最新版本准备一个新任务？',detail:'旧文件和本地提交都会保留，但不会自动复制到新文件夹，也不会自动发送到 GitHub。需要的修改请稍后从旧文件夹中挑选复制。',buttons:['取消','保留文件，另开任务'],defaultId:0,cancelId:0,noLink:true});
+          const answer = await dialog.showMessageBox(window,{type:'question',title:'保留文件并另开任务',message:'保留使用中的 FVA，从团队最新版本建立新的后台审核任务？',detail:'正在使用的 FVA 文件夹不会被修改。旧后台工作副本和本地提交也会保留；新任务仍从你绑定的目录读取改动，不会自动发送到 GitHub。',buttons:['取消','保留文件，另开任务'],defaultId:0,cancelId:0,noLink:true});
           if(answer.response!==1)throw new Error('已取消，继续保留当前任务。');
           value=await service.recoverWorkspace();
         } else if (name === 'submit') {

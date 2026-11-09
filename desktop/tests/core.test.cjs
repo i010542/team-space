@@ -40,10 +40,11 @@ async function fixture(t) {
   await git(seed, "remote", "add", "origin", remote);
   await git(seed, "push", "origin", "main");
 
-  const fakeGh = { loggedIn: true, authorized: true, login: "example-user", review: null, failCreate: 0, createCalls: 0, pushes: 0, failPush: 0, failClone: 0, failUpdateRef: 0, endReviewOnPush: null, pushedSha: null };
+  const fakeGh = { offline: false, loggedIn: true, authorized: true, login: "example-user", review: null, failCreate: 0, createCalls: 0, pushes: 0, failPush: 0, failClone: 0, failUpdateRef: 0, endReviewOnPush: null, pushedSha: null, switchLoginOnPush: null };
   const run = async (binary, args, options) => {
     if (binary === ghPath) {
       if (args[0] === "--version") return fake("gh version 2");
+      if (fakeGh.offline) throw new Error("Simulated offline GitHub");
       if (args[0] === "auth" && args[1] === "status") return fake("", fakeGh.loggedIn ? 0 : 1);
       if (args[0] === "auth" && args[1] === "login") {
         options.onOutput("! First copy your one-time ", "stderr");
@@ -56,6 +57,7 @@ async function fixture(t) {
       if (args[0] === "api" && args[3] === "repos/i010542/fva") return fake(String(fakeGh.authorized));
       if (args[0] === "pr" && args[1] === "list") return fake(JSON.stringify(fakeGh.review ? [fakeGh.review] : []));
       if (args[0] === "pr" && args[1] === "create") {
+        assert.equal(options.env.GH_TOKEN, "synthetic-test-value");
         fakeGh.createCalls++;
         if (fakeGh.failCreate-- > 0) return fake("", 1);
         fakeGh.review = { url: prUrl, number: 41, state: "OPEN", headRefName: args[args.indexOf("--head") + 1], headRefOid: fakeGh.pushedSha, isCrossRepository: false };
@@ -80,6 +82,7 @@ async function fixture(t) {
     const result = await runProcess(binary, args, options);
     if (result.code === 0 && args.includes("push")) {
       fakeGh.pushedSha = args.find((arg) => arg.includes(":refs/heads/")).split(":")[0];
+      if (fakeGh.switchLoginOnPush) fakeGh.login = fakeGh.switchLoginOnPush;
       if (fakeGh.review) {
         fakeGh.review.headRefOid = fakeGh.pushedSha;
         if (fakeGh.endReviewOnPush) fakeGh.review.state = fakeGh.endReviewOnPush;
@@ -439,3 +442,435 @@ test("rejects a Windows-equivalent tracked ancestor even when Git can store both
   assert.equal(fakeGh.pushes, 0);
 });
 
+
+
+const skillText = (body) => "---\nname: fva\n---\n" + body + "\n";
+
+async function liveFixture(t) {
+  const project = await fixture(t);
+  const live = path.join(project.dir, "installed-fva");
+  await fs.mkdir(live);
+  await fs.writeFile(path.join(live, "SKILL.md"), skillText("already edited at bind time"));
+  return { ...project, live };
+}
+
+test("binding is read-only, previews existing edits, and commits just the selected installed files", async (t) => {
+  const { service, makeService, fakeGh, live } = await liveFixture(t);
+  await fs.writeFile(path.join(live, "keep.md"), "keep original\n");
+  await fs.writeFile(path.join(live, "only-local.md"), "keep local");
+  await fs.writeFile(path.join(live, ".env.local"), "SYNTHETIC_TEST_VALUE=1");
+  await fs.mkdir(path.join(live, "bin"));
+  await fs.writeFile(path.join(live, "bin", "tool.txt"), "synthetic local tool");
+  const originalSkill = await fs.readFile(path.join(live, "SKILL.md"));
+  const originalFiles = (await fs.readdir(live)).sort();
+
+  const workspace = await service.bindWorkspace(live);
+  assert.equal(workspace.bound, true);
+  assert.equal(workspace.livePath, await fs.realpath(live));
+  assert.equal(workspace.path, workspace.livePath);
+  assert.notEqual(workspace.gitPath, workspace.livePath);
+  assert.equal(await service.openWorkspace(), workspace.livePath);
+  assert.equal((await service.bindWorkspace(live)).id, workspace.id);
+  assert.deepEqual((await fs.readdir(live)).sort(), originalFiles);
+
+  let preview = await service.changes();
+  assert.deepEqual(new Map(preview.files.map((file) => [file.path, file.status])), new Map([
+    ["SKILL.md", "modified"], ["only-local.md", "added"],
+  ]));
+  assert(preview.files.every((file) => file.eligible));
+  await service.submit({ title: "Selected skill only", previewId: preview.previewId, files: ["SKILL.md"] });
+  assert.deepEqual(await fs.readFile(path.join(live, "SKILL.md")), originalSkill);
+  assert.equal(await fs.readFile(path.join(workspace.gitPath, "SKILL.md"), "utf8"), "base\n");
+  assert.equal(await git(workspace.gitPath, "show", "HEAD:SKILL.md"), skillText("already edited at bind time").trimEnd());
+  assert.equal(await git(workspace.gitPath, "show", "HEAD:delete.md"), "delete original");
+  assert.deepEqual((await service.changes()).files.map((file) => file.path), ["only-local.md"]);
+
+  await fs.unlink(path.join(live, "keep.md"));
+  const restarted = makeService();
+  preview = await restarted.changes();
+  assert.deepEqual(new Map(preview.files.map((file) => [file.path, file.status])), new Map([
+    ["keep.md", "deleted"], ["only-local.md", "added"],
+  ]));
+  await restarted.submit({ title: "Intentional deletion", previewId: preview.previewId, files: ["keep.md"] });
+  assert.equal(await git(workspace.gitPath, "diff", "HEAD~1", "HEAD", "--name-status"), "D\tkeep.md");
+  assert.equal(await git(workspace.gitPath, "show", "HEAD:delete.md"), "delete original");
+  assert.equal(await fs.readFile(path.join(live, "only-local.md"), "utf8"), "keep local");
+  assert.equal(fakeGh.createCalls, 1);
+});
+
+test("rejects invalid bind roots and ancestor links, and verifies installed-file snapshots before pushing", async (t) => {
+  const { service, live, root, dir, fakeGh } = await liveFixture(t);
+  await assert.rejects(service.bindWorkspace(path.parse(live).root), /具体目录/);
+  await assert.rejects(service.bindWorkspace(os.homedir()), /具体目录/);
+  await assert.rejects(service.bindWorkspace(dir), /具体目录/);
+  await assert.rejects(service.bindWorkspace(root), /具体目录/);
+  await assert.rejects(service.bindWorkspace(path.join(root, "nested")), /具体目录/);
+  const invalid = path.join(dir, "another-skill");
+  await fs.mkdir(invalid);
+  await fs.writeFile(path.join(invalid, "SKILL.md"), "---\nname: other\n---\n");
+  await assert.rejects(service.bindWorkspace(invalid), /name: fva/);
+
+  const container = path.join(dir, "real-container");
+  const actual = path.join(container, "valid-child");
+  const linked = path.join(dir, "linked-container");
+  await fs.mkdir(actual, { recursive: true });
+  await fs.writeFile(path.join(actual, "SKILL.md"), skillText("external"));
+  const linkType = process.platform === "win32" ? "junction" : "dir";
+  await fs.symlink(container, linked, linkType);
+  await assert.rejects(service.bindWorkspace(path.join(linked, "valid-child")), /路径包含符号链接/);
+
+  const workspace = await service.bindWorkspace(live);
+  await fs.symlink(container, path.join(live, "link"), linkType);
+  const preview = await service.changes();
+  const link = preview.files.find((file) => file.path === "link");
+  assert.equal(link.eligible, false);
+  assert.match(link.reason, /符号链接/);
+  assert(!preview.files.some((file) => file.path.startsWith("link/")));
+
+  await fs.writeFile(path.join(live, "SKILL.md"), skillText("modified after preview"));
+  await assert.rejects(service.submit({ title: "Stale", previewId: preview.previewId, files: ["SKILL.md"] }), /文件已变化/);
+  assert.equal(fakeGh.pushes, 0);
+  assert.equal(await git(workspace.gitPath, "rev-parse", "HEAD"), workspace.baseSha);
+});
+
+test("bound team updates are read-only and a completed task can reuse the installed directory", async (t) => {
+  const { service, live, seed, fakeGh } = await liveFixture(t);
+  const workspace = await service.bindWorkspace(live);
+  const preview = await service.changes();
+  await service.submit({ title: "Start collaboration", previewId: preview.previewId, files: ["SKILL.md"] });
+  const head = await git(workspace.gitPath, "rev-parse", "HEAD");
+  const localBytes = await fs.readFile(path.join(live, "SKILL.md"));
+  await fs.writeFile(path.join(seed, "keep.md"), "team update\n");
+  await fs.writeFile(path.join(seed, "team-added.md"), "team addition\n");
+  await git(seed, "add", "--", "keep.md", "team-added.md");
+  await git(seed, "commit", "-m", "New team files");
+  await git(seed, "push", "origin", "main");
+  const update = await service.updateWorkspace();
+  assert.equal(update.readOnly, true);
+  assert.match(update.message, /使用目录未修改/);
+  assert.deepEqual(update.updates, [{ path: "keep.md", status: "modified" }, { path: "team-added.md", status: "added" }]);
+  assert.deepEqual(await fs.readFile(path.join(live, "SKILL.md")), localBytes);
+  assert.deepEqual(await fs.readdir(live), ["SKILL.md"]);
+  assert.equal(await git(workspace.gitPath, "rev-parse", "HEAD"), head);
+
+  fakeGh.review.state = "MERGED";
+  await assert.rejects(service.startWorkspace(), /先在「团队更新」/);
+  const afterReview = await service.previewUpdates();
+  const { workspace: next } = await service.applyUpdates({ previewId: afterReview.previewId, resolutions: { "SKILL.md": "mine" } });
+  assert.notEqual(next.id, workspace.id);
+  assert.equal(next.path, workspace.path);
+  assert.equal(await fs.readFile(path.join(next.gitPath, "keep.md"), "utf8"), "team update\n");
+  assert.deepEqual(await fs.readFile(path.join(live, "SKILL.md")), localBytes);
+});
+
+test("recovering a pending bound task preserves both the live directory and the old backend", async (t) => {
+  const { service, live, fakeGh, root } = await liveFixture(t);
+  const workspace = await service.bindWorkspace(live);
+  const file = path.join(live, "SKILL.md");
+  const preview = await service.changes();
+  fakeGh.failUpdateRef = 1;
+  await assert.rejects(service.submit({ title: "Pending from live", previewId: preview.previewId, files: ["SKILL.md"] }), /本地 Git 操作未完成/);
+  await fs.writeFile(file, skillText("new source edits while pending"));
+  await assert.rejects(service.bindWorkspace(live), /继续提交/);
+  const { workspace: recovered, previousPath } = await service.recoverWorkspace();
+  assert.equal(previousPath, workspace.gitPath);
+  assert.notEqual(recovered.gitPath, previousPath);
+  assert.equal(recovered.path, workspace.path);
+  assert.equal(await fs.readFile(file, "utf8"), skillText("new source edits while pending"));
+  assert.equal(await git(previousPath, "rev-parse", "HEAD"), workspace.baseSha);
+  const history = JSON.parse(await fs.readFile(path.join(root, ".state", "history", workspace.id + ".json"), "utf8"));
+  assert.equal(history.livePath, workspace.livePath);
+  assert.equal(await git(previousPath, "cat-file", "-t", history.pending.commit), "commit");
+  assert.equal(fakeGh.pushes, 0);
+  assert.match((await service.changes()).files[0].diff, /new source edits while pending/);
+});
+
+test("bound submission enforces file and batch size limits without touching installed files", async (t) => {
+  const { service, live, fakeGh } = await liveFixture(t);
+  const workspace = await service.bindWorkspace(live);
+  const paths = Array.from({ length: 11 }, (_, index) => "chunk-" + index + ".txt");
+  const payload = Buffer.alloc(1024 * 1024, 97);
+  for (const name of paths) await fs.writeFile(path.join(live, name), payload);
+  await fs.writeFile(path.join(live, "large.txt"), Buffer.alloc(payload.length + 1, 97));
+  const preview = await service.changes();
+  assert.equal(preview.files.find((file) => file.path === "large.txt").eligible, false);
+  await assert.rejects(service.submit({ title: "Oversized batch", previewId: preview.previewId, files: paths }), /总大小超过 10 MB/);
+  assert.equal(fakeGh.pushes, 0);
+  assert.deepEqual(await fs.readFile(path.join(live, paths[0])), payload);
+  assert.equal(await git(workspace.gitPath, "rev-parse", "HEAD"), workspace.baseSha);
+});
+
+
+test("a different active GitHub account cannot create a review after the confirmed account pushes", async (t) => {
+  const { service, live, fakeGh } = await liveFixture(t);
+  const workspace = await service.bindWorkspace(live);
+  const preview = await service.changes();
+  fakeGh.switchLoginOnPush = "different-user";
+  await assert.rejects(service.submit({ title: "Stay with confirmed account", previewId: preview.previewId, files: ["SKILL.md"] }), /账号已切换/);
+  assert.equal(fakeGh.pushes, 1);
+  assert.equal(fakeGh.createCalls, 0);
+  fakeGh.login = "example-user";
+  fakeGh.switchLoginOnPush = null;
+  const { workspace: pending } = await service.status();
+  assert.equal(pending.id, workspace.id);
+  assert.equal(pending.pending, true);
+  assert.equal((await service.submit(await retryInput(service))).number, 41);
+});
+
+test("rebinding opens a separate backend and leaves both installed trees unchanged", async (t) => {
+  const { service, live, dir, root } = await liveFixture(t);
+  const first = await service.bindWorkspace(live);
+  const other = path.join(dir, "second-installed-fva");
+  await fs.mkdir(other);
+  await fs.writeFile(path.join(other, "SKILL.md"), skillText("second live tree"));
+  const next = await service.bindWorkspace(other);
+  assert.notEqual(first.id, next.id);
+  assert.equal(next.path, await fs.realpath(other));
+  assert.equal(await fs.readFile(path.join(live, "SKILL.md"), "utf8"), skillText("already edited at bind time"));
+  assert.equal(await fs.readFile(path.join(other, "SKILL.md"), "utf8"), skillText("second live tree"));
+  assert.equal(await git(first.gitPath, "rev-parse", "HEAD"), first.baseSha);
+  const history = JSON.parse(await fs.readFile(path.join(root, ".state", "history", first.id + ".json"), "utf8"));
+  assert.equal(history.livePath, first.livePath);
+});
+
+
+async function installFixture(t) {
+  const project = await fixture(t);
+  const live = path.join(project.dir, "installed-fva");
+  await fs.mkdir(live);
+  const skill = skillText("installed FVA");
+  await fs.writeFile(path.join(project.seed, "SKILL.md"), skill);
+  await fs.writeFile(path.join(project.seed, "omitted.md"), "not installed\n");
+  await git(project.seed, "add", "--", "SKILL.md", "omitted.md");
+  await git(project.seed, "commit", "-m", "Installable FVA");
+  await git(project.seed, "push", "origin", "main");
+  await fs.writeFile(path.join(live, "SKILL.md"), skill);
+  await fs.writeFile(path.join(live, "keep.md"), "keep original\n");
+  return { ...project, live };
+}
+
+async function pushInstall(trees, files) {
+  for (const [name, content] of Object.entries(files)) {
+    const location = path.join(trees.seed, name);
+    if (content === null) await fs.unlink(location);
+    else {
+      await fs.mkdir(path.dirname(location), { recursive: true });
+      await fs.writeFile(location, content);
+    }
+  }
+  await git(trees.seed, "add", "-A", "--", ...Object.keys(files));
+  await git(trees.seed, "commit", "-m", "Team install update");
+  await git(trees.seed, "push", "origin", "main");
+}
+
+test("installation previews older contents immediately and allows an explicitly reconciled mine", async (t) => {
+  const trees = await installFixture(t);
+  const { service, live } = trees;
+  await fs.writeFile(path.join(live, "keep.md"), "older installation with personal content\n");
+  const bound = await service.bindWorkspace(live);
+  const first = await service.previewUpdates();
+  assert.equal(first.targetSha, bound.baseSha);
+  const conflict = first.files.find((file) => file.path === "keep.md");
+  assert.equal(conflict.status, "conflict");
+  assert.equal(conflict.mineText, "older installation with personal content\n");
+  assert.equal(conflict.teamText, "keep original\n");
+  assert(!first.files.some((file) => file.path === "omitted.md"));
+  await assert.rejects(service.applyUpdates({ previewId: first.previewId, resolutions: {} }), /所有冲突/);
+
+  const kept = await service.applyUpdates({ previewId: first.previewId, resolutions: { "keep.md": "mine" } });
+  assert.notEqual(kept.workspace.id, bound.id);
+  assert.equal((await service.changes()).files.find((file) => file.path === "keep.md").eligible, false);
+  await fs.writeFile(path.join(live, "keep.md"), "keep original\npersonal content manually reapplied\n");
+  const reconciled = await service.previewUpdates();
+  assert.match(reconciled.files.find((file) => file.path === "keep.md").reason, /已手动修改/);
+  await service.applyUpdates({ previewId: reconciled.previewId, resolutions: { "keep.md": "mine" } });
+  const personal = (await service.changes()).files.find((file) => file.path === "keep.md");
+  assert.equal(personal.eligible, true);
+  assert.match(personal.diff, /\+personal content manually reapplied/);
+});
+
+test("installation applies safe additions, edits, and deletions, and restores files and task after restart", async (t) => {
+  const trees = await installFixture(t);
+  const { service, makeService, live, fakeGh } = trees;
+  await fs.writeFile(path.join(live, "delete.md"), "delete original\n");
+  const bound = await service.bindWorkspace(live);
+  await pushInstall(trees, { "keep.md": "team modified\n", "delete.md": null, "sub/new.md": "new team file\n", "omitted.md": "team edit to omitted file\n" });
+  const plan = await service.previewUpdates();
+  assert.equal(plan.canApply, true);
+  assert.deepEqual(new Map(plan.files.map((file) => [file.path, file.status])), new Map([
+    ["SKILL.md", "skipped"], ["delete.md", "deleted"], ["keep.md", "modified"], ["omitted.md", "skipped"], ["sub/new.md", "added"],
+  ]));
+  const result = await service.applyUpdates({ previewId: plan.previewId, resolutions: {} });
+  assert.equal(await fs.readFile(path.join(live, "keep.md"), "utf8"), "team modified\n");
+  assert.equal(await fs.readFile(path.join(live, "sub", "new.md"), "utf8"), "new team file\n");
+  await assert.rejects(fs.stat(path.join(live, "delete.md")), { code: "ENOENT" });
+  await assert.rejects(fs.stat(path.join(live, "omitted.md")), { code: "ENOENT" });
+  assert.equal(await git(bound.gitPath, "rev-parse", "HEAD"), bound.baseSha);
+  assert.equal(await git(result.workspace.gitPath, "rev-parse", "HEAD"), plan.targetSha);
+  assert.deepEqual((await service.changes()).files, []);
+  const restarted = makeService();
+  assert.equal((await restarted.status()).lastBackup.id, result.backupId);
+  await restarted.restoreUpdate({ backupId: result.backupId });
+  assert.equal((await restarted.status()).workspace.id, bound.id);
+  assert.equal((await restarted.status()).lastBackup, undefined);
+  assert.equal(await fs.readFile(path.join(live, "keep.md"), "utf8"), "keep original\n");
+  assert.equal(await fs.readFile(path.join(live, "delete.md"), "utf8"), "delete original\n");
+  await assert.rejects(fs.stat(path.join(live, "sub", "new.md")), { code: "ENOENT" });
+  assert.equal(fakeGh.pushes, 0);
+});
+
+test("installation three-way merges non-overlapping known edits and preserves the personal diff", async (t) => {
+  const trees = await installFixture(t);
+  const { service, live } = trees;
+  await service.bindWorkspace(live);
+  const base = "one\nunchanged a\nunchanged b\nunchanged c\nfive\n";
+  await pushInstall(trees, { "keep.md": base });
+  const first = await service.previewUpdates();
+  await service.applyUpdates({ previewId: first.previewId, resolutions: {} });
+  await fs.writeFile(path.join(live, "keep.md"), base.replace("one", "mine"));
+  await pushInstall(trees, { "keep.md": base.replace("five", "team") });
+  const plan = await service.previewUpdates();
+  assert.equal(plan.files.find((file) => file.path === "keep.md").status, "merged");
+  await service.applyUpdates({ previewId: plan.previewId, resolutions: {} });
+  assert.equal(await fs.readFile(path.join(live, "keep.md"), "utf8"), base.replace("one", "mine").replace("five", "team"));
+  const file = (await service.changes()).files.find((item) => item.path === "keep.md");
+  assert.equal(file.eligible, true);
+  assert.match(file.diff, /\+mine/);
+  assert.doesNotMatch(file.diff, /\+team/);
+});
+
+test("installation rejects stale previews and does not overwrite later external edits during restore", async (t) => {
+  const trees = await installFixture(t);
+  const { service, live } = trees;
+  const file = path.join(live, "keep.md");
+  await service.bindWorkspace(live);
+  await pushInstall(trees, { "keep.md": "team first\n" });
+  let plan = await service.previewUpdates();
+  await fs.writeFile(file, "external after preview\n");
+  await assert.rejects(service.applyUpdates({ previewId: plan.previewId, resolutions: {} }), /预览后发生修改/);
+  assert.equal((await service.status()).lastBackup, undefined);
+  await fs.writeFile(file, "keep original\n");
+  plan = await service.previewUpdates();
+  await pushInstall(trees, { "keep.md": "team newer\n" });
+  await assert.rejects(service.applyUpdates({ previewId: plan.previewId, resolutions: {} }), /团队版本已变化/);
+  plan = await service.previewUpdates();
+  const result = await service.applyUpdates({ previewId: plan.previewId, resolutions: {} });
+  await fs.writeFile(file, "external after installation\n");
+  await assert.rejects(service.restoreUpdate({ backupId: result.backupId }), /备份后发生修改/);
+  assert.equal(await fs.readFile(file, "utf8"), "external after installation\n");
+  assert.equal((await service.status()).recoveryRequired, false);
+});
+
+test("installation can recover a persisted interrupted batch with a partially written stage", async (t) => {
+  const trees = await installFixture(t);
+  const { service, makeService, live, root, fakeGh } = trees;
+  await fs.writeFile(path.join(live, "delete.md"), "delete original\n");
+  const initial = await service.bindWorkspace(live);
+  await pushInstall(trees, { "delete.md": "updated first\n", "keep.md": "updated second\n" });
+  const plan = await service.previewUpdates();
+  const { backupId } = await service.applyUpdates({ previewId: plan.previewId, resolutions: {} });
+  const stateFile = path.join(root, ".state", "example-user.json");
+  const manifest = JSON.parse(await fs.readFile(path.join(root, ".state", "install-backups", "example-user", backupId + ".json"), "utf8"));
+  await fs.writeFile(stateFile, JSON.stringify({
+    ...manifest.previous, updateBackup: { id: backupId, createdAt: manifest.createdAt, interrupted: true },
+  }));
+  await fs.writeFile(path.join(root, ".state", "install-recovery.json"), JSON.stringify({
+    login: "example-user", id: backupId, workspaceId: initial.id,
+  }));
+  const second = manifest.operations.findIndex((file) => file.path === "keep.md");
+  const partial = path.join(live, ".team-space-update-" + backupId + "-" + second + "-new");
+  await fs.writeFile(path.join(live, "keep.md"), "keep original\n");
+  await fs.writeFile(partial, "updat");
+  await fs.writeFile(path.join(live, ".team-space-update-" + backupId + "-" + second + "-old"), "external editor saved here\n");
+
+  const restarted = makeService();
+  assert.equal((await restarted.status()).recoveryRequired, true);
+  await assert.rejects(restarted.changes(), /恢复备份/);
+  fakeGh.offline = true;
+  const offline = await restarted.status();
+  assert.equal(offline.localRecoveryAvailable, true);
+  assert.equal(offline.lastBackup.id, backupId);
+  assert.equal(offline.authorized, false);
+  const restored = await restarted.restoreUpdate({ backupId });
+  const archived = (await fs.readdir(live)).find((name) => name.startsWith(".team-space-update-preserved-"));
+  assert(archived);
+  assert(restored.message.includes(path.join(live, archived)));
+  assert.equal(await fs.readFile(path.join(live, archived), "utf8"), "external editor saved here\n");
+  fakeGh.offline = false;
+  assert.equal((await restarted.status()).recoveryRequired, false);
+  assert.equal((await restarted.status()).workspace.id, initial.id);
+  assert.equal(await fs.readFile(path.join(live, "delete.md"), "utf8"), "delete original\n");
+  assert.equal(await fs.readFile(path.join(live, "keep.md"), "utf8"), "keep original\n");
+  await assert.rejects(fs.stat(partial), { code: "ENOENT" });
+});
+
+test("installation remains preview-only while the active workspace has an open PR", async (t) => {
+  const trees = await installFixture(t);
+  const { service, live } = trees;
+  await service.bindWorkspace(live);
+  await fs.writeFile(path.join(live, "personal.md"), "pending review\n");
+  const changes = await service.changes();
+  await service.submit({ title: "Open review", previewId: changes.previewId, files: ["personal.md"] });
+  await pushInstall(trees, { "keep.md": "team update\n" });
+  const plan = await service.previewUpdates();
+  assert.equal(plan.canApply, false);
+  assert.match(plan.blockedReason, /审核仍在进行/);
+  await assert.rejects(service.applyUpdates({ previewId: plan.previewId, resolutions: {} }), /审核结束/);
+  assert.equal(await fs.readFile(path.join(live, "keep.md"), "utf8"), "keep original\n");
+});
+
+
+test("installation recognizes a historically removed team file in an older installation", async (t) => {
+  const trees = await installFixture(t);
+  const { service, live } = trees;
+  await pushInstall(trees, { "delete.md": null });
+  await fs.writeFile(path.join(live, "delete.md"), "delete original\n");
+  await fs.writeFile(path.join(live, "personal.md"), "new local contribution\n");
+  const workspace = await service.bindWorkspace(live);
+  const plan = await service.previewUpdates();
+  assert.equal(plan.targetSha, workspace.baseSha);
+  assert.equal(plan.files.find((file) => file.path === "delete.md").status, "conflict");
+  assert(!plan.files.some((file) => file.path === "personal.md"));
+  await service.applyUpdates({ previewId: plan.previewId, resolutions: { "delete.md": "mine" } });
+  const preview = await service.changes();
+  assert.equal(preview.files.find((file) => file.path === "delete.md").eligible, false);
+  assert.equal(preview.files.find((file) => file.path === "personal.md").eligible, true);
+});
+
+
+test("installation advances the backend without changing files when a personal contribution has already merged", async (t) => {
+  const trees = await installFixture(t);
+  const { service, live, fakeGh } = trees;
+  await service.bindWorkspace(live);
+  await pushInstall(trees, { "keep.md": "team baseline\n" });
+  const first = await service.previewUpdates();
+  await service.applyUpdates({ previewId: first.previewId, resolutions: {} });
+  const file = path.join(live, "keep.md");
+  await fs.writeFile(file, "already merged personal change\n");
+  const changes = await service.changes();
+  await service.submit({ title: "Personal contribution", previewId: changes.previewId, files: ["keep.md"] });
+  await pushInstall(trees, { "keep.md": "already merged personal change\n" });
+  fakeGh.review.state = "MERGED";
+  await assert.rejects(service.startWorkspace(), /先在「团队更新」/);
+  const preview = await service.previewUpdates();
+  assert.equal(preview.canApply, true);
+  assert(preview.files.every((item) => item.status === "skipped"));
+  await service.applyUpdates({ previewId: preview.previewId, resolutions: {} });
+  assert.equal(await fs.readFile(file, "utf8"), "already merged personal change\n");
+  assert.deepEqual((await service.changes()).files, []);
+});
+
+test("installation does not write through a differently spelled Windows directory", { skip: process.platform !== "win32" }, async (t) => {
+  const trees = await installFixture(t);
+  const { service, live } = trees;
+  await fs.mkdir(path.join(live, "Foo"));
+  await fs.writeFile(path.join(live, "Foo", "personal.md"), "local text\n");
+  await service.bindWorkspace(live);
+  await pushInstall(trees, { "foo/new.md": "team text\n" });
+  const preview = await service.previewUpdates();
+  const file = preview.files.find((item) => item.path === "foo/new.md");
+  assert.equal(file.status, "skipped");
+  await service.applyUpdates({ previewId: preview.previewId, resolutions: {} });
+  assert.deepEqual(await fs.readdir(path.join(live, "Foo")), ["personal.md"]);
+  assert.equal(await fs.readFile(path.join(live, "Foo", "personal.md"), "utf8"), "local text\n");
+});

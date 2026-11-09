@@ -10,6 +10,8 @@ const ended = () => review?.state === 'merged' || review?.state === 'closed';
 const canWork = () => status?.authorized && status.tools?.git && status.tools?.gh;
 const externalButtons = [...document.querySelectorAll('[data-external]')];
 const workButtons = [...document.querySelectorAll('[data-page]')];
+const changeLabels = { added: '新增', modified: '修改', deleted: '删除', A: '新增', M: '修改', D: '删除' };
+const updateLabels = { added: '新增', modified: '更新', deleted: '移除', merged: '自动合并', conflict: '需要选择', skipped: '保留原样' };
 
 let status;
 let review;
@@ -20,6 +22,11 @@ let selected = new Set();
 let checkboxes = [];
 let summaries = [];
 let deviceOpening = false;
+let focusTimer;
+let needsRefresh = false;
+let updatePreview;
+let updateStale = false;
+let updateChoices = new Map();
 
 function message(target, value) {
   say(target, value);
@@ -43,26 +50,39 @@ function hero(tag, title, description, action, label, caption = '') {
 
 function render() {
   const workspace = account();
+  const bound = Boolean(workspace?.bound);
   const allowed = canWork();
   const pending = Boolean(workspace?.pending);
   const working = Boolean(busy);
+  const recovering = Boolean(status?.recoveryRequired);
   const finished = ended();
   const unavailable = !status?.tools?.git || !status?.tools?.gh;
-  say('account-label', status?.authenticated
+  say('account-label', status?.localRecoveryAvailable
+    ? '本机恢复' + (status.login ? ' · @' + status.login : '')
+    : status?.authenticated
     ? ('@' + (status.login || 'GitHub') + (status.authorized ? '' : ' · 权限未确认'))
     : (busy === '检查工作台' ? '正在连接…' : 'GitHub 未登录'));
   id('account-badge').dataset.tone = status?.authenticated ? (status.authorized ? 'good' : 'warn') : 'neutral';
   show('permission-link', Boolean(status?.authenticated && !status.authorized));
-  show('previous-folder', Boolean(workspace && (finished || !allowed)));
-  show('onboarding', !workspace);
-  show('workspace-panels', Boolean(workspace));
-  show('pending-panel', pending);
-  show('update-workspace', !finished);
+  show('previous-folder', bound && !recovering && (finished || !allowed));
+  show('rebind-workspace', bound && !recovering);
+  show('onboarding', !bound && !pending);
+  show('workspace-panels', bound || pending);
+  show('changes-card', bound && !recovering);
+  show('review-card', bound && !recovering);
+  show('team-updates-card', bound);
+  show('workspace-details', bound);
+  show('pending-panel', pending && !recovering);
   show('open-review', Boolean(review?.url || (!review && workspace?.prUrl)));
+  show('refresh-reminder', needsRefresh);
 
   if (!status) {
     hero('检查环境', working ? '正在读取工作台状态' : '暂时无法读取工作台',
-      '检查 GitHub 账号和本机工作文件。', working ? '' : 'status', '重新检查');
+      '检查 GitHub 账号和 FVA 文件夹。', working ? '' : 'status', '重新检查');
+  } else if (recovering) {
+    hero('本机恢复', '上次更新未完成',
+      '请先恢复更新前的文件，再继续修改或提交。', 'restore', '恢复更新前版本',
+      status.localRecoveryAvailable ? '可以在本机恢复，无需登录 GitHub。' : '');
   } else if (unavailable) {
     hero('组件未就绪', '需要完整安装客户端',
       '工作台未找到所需组件。请重新运行团队提供的安装程序。', 'status', '重新检查');
@@ -70,23 +90,30 @@ function render() {
     hero('正在连接', '连接 GitHub 账号', '等待 GitHub 验证完成。');
   } else if (!status.authenticated) {
     hero('第一次参与', '连接你的 GitHub 账号',
-      '使用已有 FVA 项目权限的账号登录，就可以准备自己的工作文件。', 'login', 'GitHub 登录');
+      '使用团队授权的账号登录，再选择你正在使用的 FVA 文件夹。', 'login', 'GitHub 登录');
   } else if (!status.authorized) {
     hero('权限未确认', '请检查 FVA 项目权限',
       '确认登录的是团队授权的账号，或联系项目负责人开通写入权限。', 'login', '重新登录 GitHub',
       '刚获得权限？重新打开客户端即可重新检查。');
-  } else if (!workspace) {
-    hero('账号已连接', '准备你的工作文件',
-      '把 FVA 项目下载到这个电脑上，为你的修改准备独立的工作文件夹。', 'start', '开始参与 FVA');
-  } else if (finished) {
+  } else if (!bound && pending) {
+    hero('旧任务待处理', '先处理上次提交',
+      '请在下方继续提交或保留旧文件另开任务，然后绑定正在使用的 FVA。');
+  } else if (!bound) {
+    hero('账号已连接', '绑定正在使用的 FVA',
+      '选择直接包含 SKILL.md 的文件夹。绑定只读取原文件，并与当前团队版本对照。', 'bind', '选择正在使用的 FVA 文件夹',
+      workspace ? '升级前的工作文件夹会保留在原处。' : '绑定后继续在原目录用 WorkBuddy 或 Codex 修改。');
+  } else if (finished && !pending) {
     hero('本轮审核已结束', '准备下一次修改',
-      '开始新的工作会下载最新版本。当前文件夹及其中的文件会保留。', 'start', '开始下一次修改');
+      '新任务会以团队最新版本为对照。继续在同一个 FVA 文件夹里修改。', 'start', '开始下一次修改');
   } else {
-    hero('工作文件已就绪', '继续你的 FVA 修改',
-      '打开文件夹，用熟悉的工具修改文件。保存后回到这里刷新改动。', 'open', '打开文件夹');
+    hero('FVA 已绑定', '继续你的 FVA 修改',
+      '在 WorkBuddy 或 Codex 修改并保存原文件，回到这里查看改动。', 'open', '打开正在使用的 FVA',
+      pending ? '更换文件夹前，请先继续上次提交或另开审核任务。' : '');
   }
 
-  say('workspace-path', workspace?.path || '');
+  const directory = workspace?.path || '';
+  message('location', directory ? (bound ? '当前目录 · ' : '旧工作目录 · ') + directory : '');
+  say('workspace-path', bound ? directory : '');
   say('workspace-branch', workspace?.branch || '');
   const shownState = review?.state;
   const stateText = {
@@ -100,21 +127,16 @@ function render() {
   say('review-status', stateTitle + (review?.number ? ' · #' + review.number : ''));
   say('review-description', stateDescription);
   id('review-status').closest('.review-state').dataset.tone = shownState === 'merged' ? 'good' : '';
-  say('update-caption', finished
-    ? '下一轮请点击「开始下一次修改」，从团队的最新版本准备新文件夹。'
-    : shownState === 'open'
-      ? '当前审核仍在进行。审核结束后，可从最新版本开始下一次修改。'
-      : preview?.files.length
-        ? '检测到本机还有改动。请先处理这些文件，再刷新改动和更新工作文件。'
-        : '开始修改前，可把没有本机改动的工作文件更新到团队最新版本。');
 
-  disable('primary-action', working || !api);
+  disable('primary-action', working || !api || (primary === 'bind' && !api.bindWorkspace) ||
+    (primary === 'restore' && !canRestoreUpdate()) ||
+    (primary === 'start' && Boolean(updatePreview || status?.recoveryRequired)));
   disable('previous-folder', working || !api);
-  disable('refresh-changes', working || !allowed);
-  disable('check-review', working || !allowed);
-  disable('update-workspace', working || !allowed || pending || shownState === 'open' || Boolean(preview?.files.length));
-  disable('retry-submit', working || !allowed);
-  disable('recover-workspace', working || !allowed || !pending || !api?.recoverWorkspace);
+  disable('rebind-workspace', working || !allowed || pending || !api?.bindWorkspace || Boolean(updatePreview || status?.recoveryRequired));
+  disable('refresh-changes', working || !allowed || !bound || Boolean(updatePreview || status?.recoveryRequired));
+  disable('check-review', working || !allowed || !bound);
+  disable('retry-submit', working || !allowed || Boolean(updatePreview || status?.recoveryRequired));
+  disable('recover-workspace', working || !allowed || !pending || !api?.recoverWorkspace || Boolean(updatePreview || status?.recoveryRequired));
   for (const button of externalButtons) button.disabled = working || !api;
   for (const button of summaries) button.disabled = working;
 
@@ -122,42 +144,44 @@ function render() {
   show('changes-empty', !preview?.files.length);
   if (preview && !preview.files.length) {
     say('changes-empty-title', '没有待提交的改动');
-    say('changes-empty-description', '在工作文件夹中修改并保存后，再刷新查看。');
+    say('changes-empty-description', '在原来的 FVA 文件夹中修改并保存后，再刷新查看。');
   } else {
-    say('changes-empty-title', '先在工作文件夹里修改');
-    say('changes-empty-description', '保存后，点右上角「刷新改动」查看待提交文件。');
+    say('changes-empty-title', '查看正在使用的 FVA');
+    say('changes-empty-description', '点右上角「刷新改动」，查看这份 FVA 的待提交文件。');
   }
   updateSelection();
+  renderUpdateControls();
 }
 
 function updateSelection() {
-  const blocked = Boolean(busy || !canWork() || ended() || account()?.pending);
+  const blocked = Boolean(busy || !canWork() || ended() || account()?.pending || updatePreview || status?.recoveryRequired);
   const count = selected.size;
   const hasEligible = preview?.files.some((file) => file.eligible);
   for (const [checkbox, file] of checkboxes) {
     checkbox.disabled = Boolean(blocked || !file.eligible || (!checkbox.checked && count >= 100));
   }
   disable('submit-title', blocked || !hasEligible);
-  disable('submit-button', blocked || !preview || count === 0 || !id('submit-title').value.trim());
+  disable('submit-button', blocked || needsRefresh || !preview || count === 0 || !id('submit-title').value.trim());
   say('selected-count', '已选 ' + count + ' 个文件' + (count === 100 ? ' · 已达本次上限' : ''));
-  say('submit-hint', account()?.pending
-    ? '请先继续上次提交。'
-    : ended()
-      ? '本轮审核已结束。请开始下一次修改。'
-      : !hasEligible
-        ? '当前没有可提交的文件。'
-        : review?.state === 'open'
-          ? '所选改动将追加到当前审核。'
-          : '提交后，团队可以在 GitHub 审核所选改动。');
+  let hint = '提交后，团队可以在 GitHub 审核所选改动。';
+  if (status?.recoveryRequired) hint = '请先恢复更新前版本。';
+  else if (updatePreview) hint = '请先完成或关闭团队更新预览。';
+  else if (account()?.pending) hint = '请先继续上次提交。';
+  else if (ended()) hint = '本轮审核已结束。请开始下一次修改。';
+  else if (needsRefresh) hint = '请先刷新改动，再确认要提交的文件。';
+  else if (!hasEligible) hint = '当前没有可提交的文件。';
+  else if (review?.state === 'open') hint = '所选改动将追加到当前审核。';
+  say('submit-hint', hint);
 }
 
 function setWorkspace(workspace) {
   const before = account();
   if (!status) return;
   status = { ...status, workspace };
-  if (before?.id !== workspace?.id) {
+  if (before?.id !== workspace?.id || before?.bound !== workspace?.bound || before?.path !== workspace?.path) {
     review = undefined;
     clearPreview();
+    clearUpdatePreview();
     id('submit-title').value = '';
   }
   const pendingFiles = id('pending-files');
@@ -182,6 +206,7 @@ function applyStatus(value) {
 
 function clearPreview() {
   preview = undefined;
+  needsRefresh = false;
   selected.clear();
   checkboxes = [];
   summaries = [];
@@ -195,27 +220,21 @@ function element(tag, className, value = '') {
   return node;
 }
 
-function renderFiles(next, retainSelection) {
-  const previous = new Map(preview?.files.map((file) => [file.path, file]) || []);
-  const oldSelection = selected;
+function renderFiles(next) {
   preview = next;
+  needsRefresh = false;
   selected = new Set();
   checkboxes = [];
   summaries = [];
   const fragment = document.createDocumentFragment();
-  const labels = { added: '新增', modified: '修改', deleted: '删除' };
 
   next.files.forEach((file, i) => {
-    const old = previous.get(file.path);
-    if (retainSelection && file.eligible && oldSelection.has(file.path) &&
-        old?.status === file.status && old?.diff === file.diff) selected.add(file.path);
     const row = element('li', 'file-row');
     const main = element('div', 'file-main');
     const selection = element('div', 'file-selection');
     const checkbox = element('input');
     checkbox.type = 'checkbox';
     checkbox.id = 'file-select-' + i;
-    checkbox.checked = selected.has(file.path);
     const label = element('label', '', file.path);
     label.htmlFor = checkbox.id;
     checkbox.addEventListener('change', () => {
@@ -226,7 +245,7 @@ function renderFiles(next, retainSelection) {
     checkboxes.push([checkbox, file]);
     selection.append(checkbox, label);
     main.append(selection);
-    const stateTag = element('span', 'file-state', file.eligible ? (labels[file.status] || '改动') : '不可提交');
+    const stateTag = element('span', 'file-state', file.eligible ? (changeLabels[file.status] || '改动') : '不可提交');
     stateTag.dataset.status = file.eligible ? file.status : 'blocked';
     main.append(stateTag);
     row.append(main);
@@ -268,7 +287,7 @@ function renderFiles(next, retainSelection) {
   id('file-list').replaceChildren(fragment);
 }
 
-async function fetchChanges(retainSelection) {
+async function fetchChanges() {
   let next;
   try { next = await api.changes(); }
   catch (error) {
@@ -276,7 +295,7 @@ async function fetchChanges(retainSelection) {
     throw error;
   }
   setWorkspace(next.workspace);
-  renderFiles(next, retainSelection);
+  renderFiles(next);
 }
 
 async function optional(operation) {
@@ -286,6 +305,7 @@ async function optional(operation) {
 
 async function run(label, operation) {
   if (busy || !api) return;
+  clearTimeout(focusTimer);
   busy = label;
   message('error', '');
   notice(label + '中…');
@@ -304,14 +324,17 @@ async function run(label, operation) {
 
 async function fetchStatus() {
   applyStatus(await api.status());
-  if (canWork() && account()) await optional(async () => { review = await api.reviewStatus(); });
+  if (canWork() && account()?.bound && !status?.recoveryRequired) await optional(async () => { review = await api.reviewStatus(); });
 }
 
 function connect() {
   run('连接 GitHub', async () => {
     try {
       applyStatus(await api.login());
-      if (canWork() && account()) await optional(async () => { review = await api.reviewStatus(); });
+      if (canWork() && account()?.bound && !status?.recoveryRequired) {
+        await optional(async () => { review = await api.reviewStatus(); });
+        if (!account()?.pending && !status?.recoveryRequired) await optional(fetchChanges);
+      }
       return status.authorized ? 'GitHub 已连接，可以参与 FVA。' : '';
     } finally {
       show('device-panel', false);
@@ -321,17 +344,211 @@ function connect() {
   });
 }
 
-function startWorkspace() {
-  run('准备工作文件', async () => {
-    const before = account()?.id;
-    setWorkspace(await api.startWorkspace());
-    if (before !== account()?.id) review = { state: 'none' };
+function bindWorkspace() {
+  run('绑定 FVA 文件夹', async () => {
+    const workspace = await api.bindWorkspace();
+    if (!workspace) return;
+    if (!workspace.bound) throw new Error('没有确认 FVA 已绑定，请重新选择文件夹。');
+    setWorkspace(workspace);
     await optional(fetchStatus);
-    return '工作文件夹已就绪，可以打开文件开始修改。';
+    if (!account()?.bound) throw new Error('当前账号没有绑定 FVA 文件夹，请重新选择。');
+    await optional(fetchChanges);
+    return '已绑定正在使用的 FVA。你可以继续在原目录修改。';
   });
 }
 
-function openWorkspace() { run('打开文件夹', async () => { await api.openWorkspace(); }); }
+function startWorkspace() {
+  run('开始下一次修改', async () => {
+    const before = account()?.id;
+    setWorkspace(await api.startWorkspace());
+    const isNew = before !== account()?.id;
+    if (isNew) review = { state: 'none' };
+    await optional(fetchStatus);
+    if (!isNew) return '当前审核任务仍在使用，请查看审核结果。';
+    if (account()?.bound) await optional(fetchChanges);
+    return '已开始新的审核任务。继续使用原来的 FVA 文件夹。';
+  });
+}
+
+function openWorkspace() { run('打开 FVA 文件夹', async () => { await api.openWorkspace(); }); }
+
+function clearUpdatePreview() {
+  updatePreview = undefined;
+  updateStale = false;
+  updateChoices.clear();
+  id('updates-files').replaceChildren();
+  show('updates-panel', false);
+}
+
+function canRestoreUpdate() {
+  const recovering = Boolean(status?.recoveryRequired);
+  const offline = recovering && status?.localRecoveryAvailable;
+  return Boolean(!busy && account()?.bound && status?.lastBackup?.id && api?.restoreUpdate &&
+    !updatePreview && (offline || canWork()) && (recovering || (!account()?.pending && review?.state !== 'open')));
+}
+
+function renderUpdateControls() {
+  const bound = Boolean(account()?.bound);
+  const allowed = Boolean(bound && canWork());
+  const pending = Boolean(account()?.pending);
+  const recovering = Boolean(status?.recoveryRequired);
+  const reviewing = review?.state === 'open';
+  const working = Boolean(busy);
+  const lastBackup = status?.lastBackup;
+  const remaining = updatePreview
+    ? updatePreview.files.filter((file) => file.status === 'conflict' && !updateChoices.has(file.path)).length
+    : 0;
+  const blockedReason = updateStale
+    ? '这份预览已失效，请重新检查团队更新。'
+    : updatePreview?.blockedReason || '';
+  let availability = '';
+  if (recovering) availability = '上次更新未完成。请先恢复更新前版本。';
+  else if (pending) availability = '可以预览。更新前，请先完成上次提交或另开审核任务。';
+  else if (reviewing) availability = '可以预览。等本轮审核结束后，再应用团队更新。';
+  message('update-availability', availability);
+  show('backup-panel', bound && Boolean(lastBackup?.id));
+  say('backup-description', lastBackup?.interrupted || recovering
+    ? '上次更新中断。可把受影响的文件恢复到更新前的版本。'
+    : '可把最近一次更新影响的文件恢复到更新前的版本。');
+  disable('update-workspace', working || !allowed || recovering || !api?.updateWorkspace);
+  disable('close-update', working);
+  disable('apply-update', working || !allowed || pending || reviewing || recovering || updateStale ||
+    !updatePreview?.canApply || remaining > 0 || !api?.applyUpdates);
+  disable('restore-update', !canRestoreUpdate());
+  for (const input of id('updates-files').querySelectorAll('input')) {
+    input.disabled = working || !allowed || pending || reviewing || updateStale || recovering || !updatePreview?.canApply;
+  }
+  say('update-decisions', blockedReason || (remaining
+    ? '还有 ' + remaining + ' 个冲突需要选择。'
+    : updatePreview?.canApply ? '确认后会先备份受影响的文件，再更新原目录。' : '当前没有可应用的更新。'));
+}
+
+function fileText(label, value) {
+  const pane = element('div');
+  const heading = element('h4', '', label);
+  const content = element('pre', '', value === null ? '这份版本没有此文件。' : value || '（空文件）');
+  content.tabIndex = 0;
+  content.setAttribute('aria-label', label);
+  pane.append(heading, content);
+  return pane;
+}
+
+function conflictChoices(change, index) {
+  const field = element('fieldset', 'update-choice');
+  field.append(element('legend', '', '更新后使用哪份内容？'));
+  const options = [
+    ['mine', change.mineText === null ? '保留我的版本（保持缺少此文件）' : '保留我的版本'],
+    ['team', change.teamText === null ? '采用团队版本（移除此文件）' : '采用团队版本']
+  ];
+  for (const [value, label] of options) {
+    const option = element('label');
+    const input = element('input');
+    input.type = 'radio';
+    input.name = 'update-choice-' + index;
+    input.value = value;
+    input.addEventListener('change', () => {
+      updateChoices.set(change.path, value);
+      renderUpdateControls();
+    });
+    option.append(input, document.createTextNode(label));
+    field.append(option);
+  }
+  return field;
+}
+
+function showTeamUpdates(result) {
+  updatePreview = result;
+  updateStale = false;
+  updateChoices.clear();
+  const entries = document.createDocumentFragment();
+  result.files.forEach((change, index) => {
+    const row = element('li');
+    const heading = element('div', 'update-file-heading');
+    const tag = element('span', 'file-state', updateLabels[change.status] || '变动');
+    tag.dataset.status = change.status;
+    heading.append(element('code', '', change.path), tag);
+    row.append(heading);
+    if (change.reason) row.append(element('p', 'caption', change.reason));
+    if (change.status === 'conflict') {
+      const details = element('details', 'update-file-detail');
+      details.append(element('summary', '', '对照本机和团队的内容'));
+      const sides = element('div', 'update-comparison');
+      sides.append(fileText('我的版本', change.mineText), fileText('团队版本', change.teamText));
+      details.append(sides);
+      if (change.textTruncated) details.append(element('p', 'caption', '预览仅显示部分内容，选择会应用到整个文件。'));
+      row.append(details, conflictChoices(change, index));
+    } else if (change.diff) {
+      const details = element('details', 'update-file-detail');
+      const text = element('pre', '', change.diff);
+      text.tabIndex = 0;
+      text.setAttribute('aria-label', '文件差异');
+      details.append(element('summary', '', '查看文件差异'), text);
+      row.append(details);
+    }
+    entries.append(row);
+  });
+  id('updates-files').replaceChildren(entries);
+  show('update-conflict-help', result.files.some((file) => file.status === 'conflict'));
+  say('updates-title', result.files.length ? '团队更新预览 · ' + result.files.length + ' 个文件' : '暂无文件差异');
+  say('updates-message', result.message || '请检查文件差异。遇到冲突时，逐项选择要保留的内容。');
+  show('updates-panel', true);
+  id('updates-title').focus({ preventScroll: true });
+}
+
+async function finishUpdate(result, restored) {
+  const originalPath = account()?.path;
+  const title = id('submit-title').value;
+  const wasLocalRecovery = restored && status?.localRecoveryAvailable;
+  setWorkspace(result.workspace);
+  if (account()?.path === originalPath) id('submit-title').value = title;
+  clearPreview();
+  clearUpdatePreview();
+  status = { ...status, recoveryRequired: false, localRecoveryAvailable: false,
+    lastBackup: !restored && result.backupId ? { id: result.backupId } : undefined };
+  if (!wasLocalRecovery) await optional(fetchStatus);
+  if (canWork() && account()?.bound && !account()?.pending && !status?.recoveryRequired) await optional(fetchChanges);
+  return result.message || (restored ? '已恢复更新前的文件。' : 'FVA 已更新。可在团队更新区恢复更新前的文件。');
+}
+
+function restoreUpdate() {
+  if (!canRestoreUpdate()) return;
+  run('恢复更新前版本', async () => {
+    let result;
+    try { result = await api.restoreUpdate({ backupId: status.lastBackup.id }); }
+    catch (error) {
+      if (error?.message?.startsWith('已取消恢复')) return '已取消恢复。';
+      clearPreview();
+      if (!status?.localRecoveryAvailable) await optional(fetchStatus);
+      throw error;
+    }
+    return finishUpdate(result, true);
+  });
+}
+
+function refreshOnFocus() {
+  if (updatePreview && preview?.files.length && !busy) {
+    needsRefresh = true;
+    render();
+  }
+  const canRefresh = () => !busy && canWork() && account()?.bound && !account().pending &&
+    !updatePreview && !status?.recoveryRequired && !id('work-page').hidden;
+  const hasDraft = () => selected.size || id('submit-title').value || id('file-list').contains(document.activeElement);
+  const markStale = () => {
+    needsRefresh = true;
+    render();
+  };
+  clearTimeout(focusTimer);
+  if (!canRefresh()) return;
+  if (hasDraft()) {
+    markStale();
+    return;
+  }
+  focusTimer = setTimeout(() => {
+    if (!canRefresh()) return;
+    if (hasDraft()) markStale();
+    else run('读取本机改动', fetchChanges);
+  }, 350);
+}
 
 function submit(input) {
   run(input.retry ? '继续上次提交' : '提交审核', async () => {
@@ -350,8 +567,11 @@ function submit(input) {
     review = { state: 'open', url: result.prUrl, number: result.number };
     id('submit-title').value = '';
     clearPreview();
-    await optional(() => fetchChanges(false));
-    return '已提交审核 #' + result.number + '。可在下方查看审核进度。';
+    if (account()?.bound) {
+      await optional(fetchChanges);
+      return '已提交审核 #' + result.number + '。可在下方查看审核进度。';
+    }
+    return '旧任务已提交审核 #' + result.number + '。现在可以绑定正在使用的 FVA。';
   });
 }
 
@@ -370,11 +590,18 @@ function navigate(page, label) {
 id('primary-action').addEventListener('click', () => {
   if (primary === 'status') run('检查工作台', fetchStatus);
   if (primary === 'login') connect();
+  if (primary === 'bind') bindWorkspace();
   if (primary === 'start') startWorkspace();
   if (primary === 'open') openWorkspace();
+  if (primary === 'restore') restoreUpdate();
 });
 id('previous-folder').addEventListener('click', openWorkspace);
-id('refresh-changes').addEventListener('click', () => run('读取本机改动', () => fetchChanges(true)));
+id('rebind-workspace').addEventListener('click', bindWorkspace);
+id('refresh-changes').addEventListener('click', () => run('读取本机改动', async () => {
+  const hasSelection = selected.size > 0;
+  await fetchChanges();
+  if (hasSelection && preview.files.length) return '已刷新改动，请重新勾选这次要提交的文件。';
+}));
 id('submit-title').addEventListener('input', updateSelection);
 id('submit-form').addEventListener('submit', (event) => {
   event.preventDefault();
@@ -382,22 +609,49 @@ id('submit-form').addEventListener('submit', (event) => {
   submit({ title: id('submit-title').value.trim(), files: [...selected], previewId: preview.previewId });
 });
 id('retry-submit').addEventListener('click', () => submit({ retry: true }));
-id('recover-workspace').addEventListener('click', () => run('准备新工作文件', async () => {
+id('recover-workspace').addEventListener('click', () => run('另开审核任务', async () => {
   const { workspace, previousPath } = await api.recoverWorkspace();
   setWorkspace(workspace);
   await optional(fetchStatus);
-  return '新工作文件已准备。旧文件保留在 ' + previousPath + '。需要的修改请从旧文件夹复制到新文件夹。';
+  if (account()?.bound) {
+    await optional(fetchChanges);
+    return '已另开审核任务。仍然使用原来的 FVA 文件夹，请查看这次要提交的改动。';
+  }
+  return '旧文件已保留在 ' + previousPath + '。现在可以绑定正在使用的 FVA。';
 }));
 id('check-review').addEventListener('click', () => run('查询审核结果', async () => {
   review = await api.reviewStatus();
   return '已查询 GitHub 上的审核状态。';
 }));
-id('update-workspace').addEventListener('click', () => run('更新工作文件', async () => {
-  setWorkspace(await api.updateWorkspace());
-  clearPreview();
-  await optional(fetchStatus);
-  return '工作文件已更新到团队最新版本。';
+id('update-workspace').addEventListener('click', () => run('检查团队更新', async () => {
+  clearUpdatePreview();
+  const result = await api.updateWorkspace();
+  if (!result?.readOnly || !Array.isArray(result.files) ||
+      (result.canApply && typeof result.previewId !== 'string')) throw new Error('无法读取团队更新，请重试。');
+  setWorkspace(result.workspace);
+  showTeamUpdates(result);
 }));
+id('close-update').addEventListener('click', () => {
+  if (busy) return;
+  clearUpdatePreview();
+  render();
+  id('update-workspace').focus({ preventScroll: true });
+});
+id('apply-update').addEventListener('click', () => run('更新我的 FVA', async () => {
+  let result;
+  try {
+    result = await api.applyUpdates({ previewId: updatePreview.previewId, resolutions: Object.fromEntries(updateChoices) });
+  } catch (error) {
+    if (error?.message?.startsWith('已取消更新')) return '已取消更新。';
+    updateStale = true;
+    clearPreview();
+    await optional(fetchStatus);
+    if (status?.recoveryRequired) clearUpdatePreview();
+    throw error;
+  }
+  return finishUpdate(result, false);
+}));
+id('restore-update').addEventListener('click', restoreUpdate);
 for (const button of externalButtons) {
   button.addEventListener('click', () => run('打开浏览器', () => api.openExternal(button.dataset.external).then(() => '')));
 }
@@ -429,7 +683,11 @@ if (api) {
     notice('已取得验证码，请在浏览器完成授权。');
   });
   window.addEventListener('beforeunload', unsubscribe, { once: true });
-  run('检查工作台', fetchStatus);
+  window.addEventListener('focus', refreshOnFocus);
+  run('检查工作台', async () => {
+    await fetchStatus();
+    if (canWork() && account()?.bound && !account()?.pending && !status?.recoveryRequired) await optional(fetchChanges);
+  });
 } else {
   render();
   displayError(new Error('请从已安装的 Windows 客户端打开工作台。'));

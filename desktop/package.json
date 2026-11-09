@@ -1,6 +1,6 @@
 {
   "name": "team-space-desktop",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "团队 Skill 共创客户端",
   "author": "i010542",
   "private": true,
@@ -10,15 +10,45 @@
     "test": "node --test tests/*.test.cjs",
     "package": "electron-builder --win nsis --x64 --publish never"
   },
-  "devDependencies": { "electron": "45.2.3", "electron-builder": "26.18.0" },
+  "devDependencies": {
+    "electron": "45.2.3",
+    "electron-builder": "26.18.0"
+  },
   "build": {
     "appId": "com.i010542.teamspace",
     "productName": "Team Space",
-    "directories": { "output": "release" },
-    "files": ["src/**/*", "assets/**/*", "THIRD-PARTY-NOTICES.md", "package.json"],
-    "extraResources": [{"from": "vendor", "to": "tools", "filter": ["**/*"]}],
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "THIRD-PARTY-NOTICES.md",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "vendor",
+        "to": "tools",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
     "asar": true,
-    "win": {"target": "nsis", "icon": "assets/icon.ico", "signExecutable": false, "artifactName": "Team-Space-${version}-Setup.${ext}"},
-    "nsis": {"oneClick": false, "perMachine": false, "allowToChangeInstallationDirectory": true, "deleteAppDataOnUninstall": false, "createDesktopShortcut": true, "shortcutName": "团队共创空间"}
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico",
+      "signExecutable": false,
+      "artifactName": "Team-Space-${version}-Setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
+      "createDesktopShortcut": true,
+      "shortcutName": "团队共创空间"
+    }
   }
 }
