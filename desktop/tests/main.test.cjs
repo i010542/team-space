@@ -164,3 +164,14 @@ test('warm navigation ignores raw argv, invalid envelopes, and arbitrary externa
     'https://github.com/i010542/fva/issues',
   ]);
 });
+
+ test('collaboration links open fixed Pages guides and reject arbitrary destinations', async()=>{
+ const h=await harness();
+ for(const [key,suffix] of Object.entries({portalFiles:'team/files/',portalVersions:'team/versions/',portalReviews:'team/reviews/',portalSuggestions:'team/suggestions/',portalDocs:'docs/'})){
+ assert.equal((await h.invoke('openExternal',key)).ok,true);
+ assert.equal(h.calls.open.at(-1),'https://i010542.github.io/team-space/'+suffix);
+ }
+ const before=h.calls.open.length;
+ for(const input of ['https://example.com','file:///C:/Synthetic','portalFiles?next=evil', {key:'portalFiles'}])assert.equal((await h.invoke('openExternal',input)).ok,false);
+ assert.equal(h.calls.open.length,before);
+ });

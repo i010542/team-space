@@ -1,7 +1,5 @@
-import { Landing } from "../ui";
-
-export const metadata = { title: "项目资料" };
-
-export default function Docs() {
-  return <Landing view="docs" title="在客户端查看 FVA 资料" description="在客户端按标题、文件名或分类查找项目资料和使用帮助。" />;
-}
+import Link from "next/link";
+import { DesktopEntry } from "../desktop-entry";
+export const metadata={title:"项目资料"};
+const docs=[{file:"SKILL.md",title:"FVA 使用说明",text:"了解这份 Skill 能做什么，以及怎样开始使用。"},{file:"INSTALL.md",title:"安装与准备",text:"查看安装方法和开始前的准备工作。"},{file:"STRUCTURE.md",title:"文件放在哪里",text:"了解各个文件夹和文件的用途。"},{file:"CHANGELOG.md",title:"最近更新了什么",text:"查看团队记录的版本变化。"}];
+export default function Docs(){return <><header className="site-header"><Link className="brand" href="/">团队共创空间</Link><Link href="/team/files/">团队协作</Link></header><main className="content guide-content"><section className="hero"><p className="eyebrow">FVA · 项目资料</p><h1>先找到你需要的说明</h1><p className="hero-description">这里列出资料入口。点击后在 GitHub 阅读原文，需要使用团队已开通权限的账号。</p></section><section className="landing-section"><ul className="docs-grid">{docs.map(d=><li className="landing-card" key={d.file}><h2>{d.title}</h2><p>{d.text}</p><a className="button button-outline" href={"https://github.com/i010542/fva/blob/main/"+d.file} target="_blank" rel="noreferrer">阅读原文 ↗</a></li>)}</ul></section><section className="landing-section"><h2>在客户端继续操作</h2><p>客户端也有资料搜索和分类，方便按文件名查找。</p><DesktopEntry view="docs" /></section><footer className="footer">文件原文由团队在 GitHub 维护。</footer></main></>;}

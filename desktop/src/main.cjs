@@ -20,6 +20,10 @@ const external = Object.freeze({
   changelog: 'https://github.com/i010542/fva/blob/main/CHANGELOG.md',
   device: 'https://github.com/login/device',
   portal: 'https://i010542.github.io/team-space/',
+  portalFiles: 'https://i010542.github.io/team-space/team/files/',
+  portalVersions: 'https://i010542.github.io/team-space/team/versions/',
+  portalReviews: 'https://i010542.github.io/team-space/team/reviews/',
+  portalSuggestions: 'https://i010542.github.io/team-space/team/suggestions/',
   portalFva: 'https://i010542.github.io/team-space/projects/fva/',
   portalDocs: 'https://i010542.github.io/team-space/docs/'
 });

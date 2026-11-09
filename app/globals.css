@@ -74,3 +74,16 @@ svg { flex: none; vertical-align: middle; }
   .landing-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .landing-section { margin-top: 17px; }
 }
+
+.guide-content { max-width: 960px; }
+.guide-steps { display:grid; gap:12px; }
+.guide-steps li { display:flex; gap:14px; align-items:flex-start; padding:18px; }
+.guide-steps .step-number { flex:none; width:30px; height:30px; font-size:15px; }
+.guide-steps p, .docs-grid p { font-size:16px; }
+.guide-note { margin:20px 0 12px; color:var(--muted); }
+.guide-nav { display:flex; flex-wrap:wrap; gap:10px; margin-top:28px; }
+.guide-nav [aria-current="page"] { background:var(--accent-soft); }
+.docs-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.docs-grid .landing-card { padding:22px; }
+.docs-grid .button { margin-top:16px; }
+@media(max-width:600px){ .docs-grid {grid-template-columns:1fr;} }

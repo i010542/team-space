@@ -66,7 +66,7 @@
           <section class="hero" aria-labelledby="action-title">
             <div class="hero-copy">
               <div class="state-tag"><span class="indicator"></span><span id="hero-status">正在检查</span></div>
-              <h2 id="action-title">正在打开工作台</h2>
+              <h2 id="action-title" tabindex="-1">正在打开工作台</h2>
               <p id="action-description">正在查看登录状态和 FVA 文件夹。</p>
               <div class="actions">
                 <button id="primary-action" type="button" class="button button-primary" hidden><span id="primary-label"></span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button>
@@ -97,18 +97,24 @@
           </section>
 
           <section id="onboarding" class="card flow-card" aria-labelledby="flow-title">
-            <div class="card-header"><div><p class="section-label">第一次参与</p><h2 id="flow-title">三步把改动发给团队</h2></div></div>
+            <div class="card-header"><div><p id="flow-label" class="section-label">第一次参与</p><h2 id="flow-title">三步把改动发给团队</h2></div></div>
             <ol class="flow-steps">
-              <li><span class="step-index">01</span><div><strong>登录账号</strong><p>用团队已开通权限的 GitHub 账号登录。</p></div></li>
-              <li><span class="step-index">02</span><div><strong>选 FVA 文件夹</strong><p>选好后，照常用 WorkBuddy 或 Codex 修改并保存。</p></div></li>
-              <li><span class="step-index">03</span><div><strong>发给团队审核</strong><p>勾选改好的文件，写一句说明，再发送。</p></div></li>
+              <li><button id="step-login" class="flow-step" type="button" disabled>
+                <span class="step-index" aria-hidden="true">01</span><span class="flow-step-copy"><strong>登录账号</strong><span>用团队已开通权限的 GitHub 账号登录。</span><span class="flow-step-action"><span id="step-login-label">登录 GitHub</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
+              </button></li>
+              <li><button id="step-folder" class="flow-step" type="button" disabled>
+                <span class="step-index" aria-hidden="true">02</span><span class="flow-step-copy"><strong>选 FVA 文件夹</strong><span>选好后，照常用 WorkBuddy 或 Codex 修改并保存。</span><span class="flow-step-action"><span id="step-folder-label">选择文件夹</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
+              </button></li>
+              <li><button id="step-review" class="flow-step" type="button" disabled>
+                <span class="step-index" aria-hidden="true">03</span><span class="flow-step-copy"><strong>发给团队审核</strong><span>勾选改好的文件，写一句说明，再发送。</span><span class="flow-step-action"><span id="step-review-label">前往选文件</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
+              </button></li>
             </ol>
           </section>
 
           <div id="workspace-panels" class="panel-stack" hidden>
             <section id="pending-panel" class="card pending-panel" aria-labelledby="pending-title" hidden>
               <div class="card-header">
-                <div><p class="section-label">发送未完成</p><h2 id="pending-title">上次的改动还没发完</h2><p id="pending-description"></p></div>
+                <div><p class="section-label">发送未完成</p><h2 id="pending-title" tabindex="-1">上次的改动还没发完</h2><p id="pending-description"></p></div>
                 <div class="pending-actions">
                   <button id="retry-submit" type="button" class="button button-primary">继续发给团队 <svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button>
                   <button id="recover-workspace" type="button" class="button button-secondary">保留文件，开始新一轮</button>
@@ -118,7 +124,7 @@
             </section>
             <section id="changes-card" class="card changes-card" aria-labelledby="changes-title">
               <div class="card-header">
-                <div><p class="section-label">01 / 选文件</p><h2 id="changes-title">选出要发的改动</h2><p>保存文件后点「刷新改动」，勾选这次要发的文件。</p></div>
+                <div><p class="section-label">01 / 选文件</p><h2 id="changes-title" tabindex="-1">选出要发的改动</h2><p>保存文件后点「刷新改动」，勾选这次要发的文件。</p></div>
                 <button id="refresh-changes" class="button button-secondary" type="button"><svg class="icon" aria-hidden="true"><use href="#i-refresh"></use></svg>刷新改动</button>
               </div>
               <p id="refresh-reminder" class="refresh-reminder" role="status" hidden>文件可能有新改动。请刷新后重新选文件，已写的说明会保留。</p>
@@ -179,28 +185,28 @@
           <section id="team-collaboration" class="card team-collaboration" aria-labelledby="team-collaboration-title">
             <div class="card-header">
               <div><h2 id="team-collaboration-title">团队协作</h2><p>查看团队文件、待审核的修改和讨论。</p></div>
-              <button type="button" class="button button-primary" data-local-view="docs"><svg class="icon" aria-hidden="true"><use href="#i-book"></use></svg>查看项目资料</button>
+              <button type="button" class="button button-primary" data-external="portalDocs"><svg class="icon" aria-hidden="true"><use href="#i-book"></use></svg>查看项目资料 <svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button>
             </div>
             <div class="project-resources">
-              <button type="button" class="project-resource" data-external="repository">
+              <button type="button" class="project-resource" data-external="portalFiles">
                 <span class="resource-icon"><svg class="icon" aria-hidden="true"><use href="#i-folder"></use></svg></span>
                 <span class="resource-copy"><strong>查看团队文件</strong><small>查看团队正式版本的文件。</small></span>
-                <span class="browser-marker"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg>浏览器打开</span>
+                <span class="browser-marker"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg>打开网页说明</span>
               </button>
-              <button type="button" class="project-resource" data-external="branches">
+              <button type="button" class="project-resource" data-external="portalVersions">
                 <span class="resource-icon"><svg class="icon" aria-hidden="true"><use href="#i-versions"></use></svg></span>
                 <span class="resource-copy"><strong>大家的修改版本</strong><small>查看单独保存的修改版本。</small></span>
-                <span class="browser-marker"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg>浏览器打开</span>
+                <span class="browser-marker"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg>打开网页说明</span>
               </button>
-              <button type="button" class="project-resource" data-external="pulls">
+              <button type="button" class="project-resource" data-external="portalReviews">
                 <span class="resource-icon"><svg class="icon" aria-hidden="true"><use href="#i-review"></use></svg></span>
                 <span class="resource-copy"><strong>待审核的修改</strong><small>查看已经发出、还没处理完的修改。</small></span>
-                <span class="browser-marker"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg>浏览器打开</span>
+                <span class="browser-marker"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg>打开网页说明</span>
               </button>
-              <button type="button" class="project-resource" data-external="issues">
+              <button type="button" class="project-resource" data-external="portalSuggestions">
                 <span class="resource-icon"><svg class="icon" aria-hidden="true"><use href="#i-help"></use></svg></span>
                 <span class="resource-copy"><strong>提问题或建议</strong><small>查看团队讨论，或提出你的想法。</small></span>
-                <span class="browser-marker"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg>浏览器打开</span>
+                <span class="browser-marker"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg>打开网页说明</span>
               </button>
             </div>
           </section>

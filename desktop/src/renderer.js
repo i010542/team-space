@@ -82,7 +82,6 @@ function render() {
   show('permission-link', Boolean(status?.authenticated && !status.authorized));
   show('previous-folder', bound && !recovering && (finished || !allowed));
   show('rebind-workspace', bound && !recovering);
-  show('onboarding', !bound && !pending);
   show('workspace-panels', bound || pending);
   show('changes-card', bound && !recovering);
   show('review-card', bound && !recovering);
@@ -166,8 +165,55 @@ function render() {
     say('changes-empty-description', '点「刷新改动」查看可以发给团队的文件。');
   }
   updateSelection();
+  renderWorkflow();
   renderUpdateControls();
   renderNavigation();
+}
+
+function renderWorkflow() {
+  const authenticated = Boolean(status?.authenticated);
+  const workspace = account();
+  const blocked = Boolean(!api || !status || busy || status?.recoveryRequired);
+  const accessLabel = !authenticated ? '先登录' : !canWork() ? '查看权限' : '';
+  say('flow-label', workspace?.bound ? '日常协作' : '第一次参与');
+  say('step-login-label', authenticated ? '已登录 · 查看状态' : '登录 GitHub');
+  say('step-folder-label', accessLabel || (workspace?.pending ? '先处理上次改动'
+    : updatePreview ? '先关闭更新预览' : workspace?.bound ? '已选择 · 更换文件夹' : '选择文件夹'));
+  say('step-review-label', accessLabel || (workspace?.pending ? '先处理上次改动'
+    : workspace?.bound ? '前往选文件' : '先选文件夹'));
+  for (const step of ['step-login', 'step-folder', 'step-review']) disable(step, blocked);
+}
+
+function focusWorkflowTarget(target) {
+  clearTimeout(focusTimer);
+  const destination = id(target);
+  destination.focus({ preventScroll: true });
+  destination.scrollIntoView({ block: 'start' });
+}
+
+function focusWorkflowHero() {
+  const button = id('primary-action');
+  focusWorkflowTarget(button.hidden || button.disabled ? 'action-title' : 'primary-action');
+}
+
+function canUseWorkflow() {
+  return Boolean(api && status && !busy && !status.recoveryRequired);
+}
+
+function guideWorkflowAccess() {
+  if (canWork()) return true;
+  if (!status.tools?.git || !status.tools?.gh) notice('请先重新安装客户端，再继续。');
+  else if (!status.authenticated) notice('请先用团队已开通权限的账号登录 GitHub。');
+  else notice('请用团队已开通权限的账号重新登录，或联系项目负责人。');
+  focusWorkflowHero();
+  return false;
+}
+
+function guidePendingWork() {
+  if (!account()?.pending) return false;
+  notice('上次的改动还没发完。请先继续发送，或保留文件开始新一轮。');
+  focusWorkflowTarget('pending-title');
+  return true;
 }
 
 function updateSelection() {
@@ -716,6 +762,39 @@ id('primary-action').addEventListener('click', () => {
   if (primary === 'start') startWorkspace();
   if (primary === 'open') openWorkspace();
   if (primary === 'restore') restoreUpdate();
+});
+id('step-login').addEventListener('click', () => {
+  if (!canUseWorkflow()) return;
+  if (status.authenticated) {
+    notice(canWork() ? '已登录 GitHub，可以继续。' : '已登录 GitHub。请查看当前账号的项目权限。');
+    focusWorkflowTarget('action-title');
+  } else if (status.tools?.git && status.tools?.gh) {
+    connect();
+  } else {
+    guideWorkflowAccess();
+  }
+});
+id('step-folder').addEventListener('click', () => {
+  if (!canUseWorkflow() || !guideWorkflowAccess() || guidePendingWork()) return;
+  if (updatePreview) {
+    notice('请先关闭团队更新预览，再选择文件夹。');
+    focusWorkflowTarget('updates-title');
+    return;
+  }
+  if (!api.bindWorkspace) {
+    notice('客户端暂时无法选择文件夹。请重新打开后再试。');
+    return;
+  }
+  bindWorkspace();
+});
+id('step-review').addEventListener('click', () => {
+  if (!canUseWorkflow() || !guideWorkflowAccess() || guidePendingWork()) return;
+  if (!account()?.bound) {
+    notice('请先选择现在用的 FVA 文件夹，再选要发给团队的文件。');
+    focusWorkflowHero();
+    return;
+  }
+  focusWorkflowTarget('changes-title');
 });
 id('previous-folder').addEventListener('click', openWorkspace);
 id('rebind-workspace').addEventListener('click', bindWorkspace);
