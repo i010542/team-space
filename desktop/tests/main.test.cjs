@@ -5,7 +5,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 
 async function harness({ argv = ["Team Space.exe"], holdLoad = false } = {}) {
-  const calls = { apply: [], restore: [], dialogs: [], open: [], notifications: [], focus: 0, restored: 0, updates: 0 };
+  const calls = { apply: [], restore: [], dialogs: [], open: [], notifications: [], focus: 0, restored: 0, updates: 0, bindings: [], pickers: [] };
   const events = new Map();
   let finishLoad;
   const loading = holdLoad ? new Promise(resolve => { finishLoad = resolve; }) : Promise.resolve();
@@ -18,6 +18,7 @@ async function harness({ argv = ["Team Space.exe"], holdLoad = false } = {}) {
   const status = { workspace, lastBackup: { id: 'test-backup', createdAt: '2026-11-09T00:00:00Z' } };
   const service = {
     status: async () => status,
+    bindWorkspace: async directory => { calls.bindings.push(directory); return {...workspace,path:directory}; },
     updateWorkspace: async () => { calls.updates++; await updateGate; return preview; },
     applyUpdates: async (input) => { calls.apply.push(input); return { workspace }; },
     restoreUpdate: async (input) => { calls.restore.push(input); return { workspace }; },
@@ -38,7 +39,8 @@ async function harness({ argv = ["Team Space.exe"], holdLoad = false } = {}) {
     protocol: { registerSchemesAsPrivileged() {}, handle() {} }, net: {}, shell: { async openExternal(url) { calls.open.push(url); } },
     session: { defaultSession: { setPermissionRequestHandler() {}, setPermissionCheckHandler() {} } },
     ipcMain: { handle: (name, fn) => handlers.set(name, fn) },
-    dialog: { response: 1, showErrorBox() {}, async showMessageBox(_window, data) {
+    dialog: { response: 1, selection: {canceled:true,filePaths:[]}, showErrorBox() {},
+      async showOpenDialog(_window, options) { calls.pickers.push(options); return this.selection; }, async showMessageBox(_window, data) {
       calls.dialogs.push(data); return { response: this.response };
     } },
   };
@@ -175,3 +177,25 @@ test('warm navigation ignores raw argv, invalid envelopes, and arbitrary externa
  for(const input of ['https://example.com','file:///C:/Synthetic','portalFiles?next=evil', {key:'portalFiles'}])assert.equal((await h.invoke('openExternal',input)).ok,false);
  assert.equal(h.calls.open.length,before);
  });
+
+test('Skill picker binds only the chosen SKILL.md parent after confirmation', async t => {
+ const tmp = await fs.mkdtemp(path.join(require('node:os').tmpdir(),'team-space-picker-'));
+ t.after(()=>fs.rm(tmp,{recursive:true,force:true}));
+ const skill=path.join(tmp,'SKILL.md'); await fs.writeFile(skill,'name: fva');
+ const other=path.join(tmp,'README.md'); await fs.writeFile(other,'test');
+ const folder=path.join(tmp,'nested','SKILL.md'); await fs.mkdir(folder,{recursive:true});
+ const h=await harness();
+ assert.equal((await h.invoke('bindWorkspace')).value,null);
+ assert.deepEqual(Array.from(h.calls.pickers[0].properties),['openFile']);
+ for(const file of [other,folder,path.join(tmp,'missing','SKILL.md')]){
+  h.electron.dialog.selection={canceled:false,filePaths:[file]};
+  assert.equal((await h.invoke('bindWorkspace')).ok,false);
+ }
+ assert.equal(h.calls.bindings.length,0); assert.equal(h.calls.dialogs.length,0);
+ h.electron.dialog.selection={canceled:false,filePaths:[skill]}; h.electron.dialog.response=0;
+ assert.equal((await h.invoke('bindWorkspace')).value,null);assert.equal(h.calls.bindings.length,0);
+ h.electron.dialog.response=1;
+ assert.equal((await h.invoke('bindWorkspace')).ok,true);
+ assert.deepEqual(h.calls.bindings,[tmp]);
+ assert.match(h.calls.dialogs.at(-1).detail,/不只是 SKILL.md/);
+});

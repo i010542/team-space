@@ -1,4 +1,4 @@
-export const desktopVersion = "0.4.4";
+export const desktopVersion = "0.4.5";
 export const desktopDownload = "https://github.com/i010542/team-space/releases/download/desktop-v" + desktopVersion + "/Team-Space-" + desktopVersion + "-Setup.exe";
 
 export const desktopLinks = {

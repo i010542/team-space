@@ -16,7 +16,7 @@ const changeLabels = { added: '新增', modified: '修改', deleted: '删除', A
 const updateLabels = { added: '新增', modified: '更新', deleted: '移除', merged: '两边改动都保留', conflict: '需要选择版本', skipped: '保留原样' };
 const navigationLabels = { workspace: 'FVA 工作台', docs: 'FVA 项目资料', updates: 'FVA 团队更新' };
 const progressMessages = {
-  '绑定 FVA 文件夹': '正在选择 FVA 文件夹…',
+  '绑定 FVA 文件夹': '正在选择 SKILL.md…',
   '提交审核': '正在处理发送请求…',
   '继续上次提交': '正在继续发送改动…',
 };
@@ -105,16 +105,16 @@ function render() {
     hero('正在登录', '在浏览器登录 GitHub', '按浏览器提示操作，完成后回到这里。');
   } else if (!status.authenticated) {
     hero('第一步', '用团队账号登录',
-      '登录 GitHub 后，就可以选择现在用的 FVA 文件夹。', 'login', '登录 GitHub');
+      '登录 GitHub 后，就可以选择现在用的 SKILL.md。', 'login', '登录 GitHub');
   } else if (!status.authorized) {
     hero('需要项目权限', '请确认账号能访问 FVA',
       '用团队已开通权限的账号登录。需要权限时请联系项目负责人。', 'login', '重新登录 GitHub');
   } else if (!bound && pending) {
     hero('还有改动没发完', '先处理上次的改动',
-      '在下方继续发送，或保留文件再开始新一轮。然后选择现在用的 FVA 文件夹。');
+      '在下方继续发送，或保留文件再开始新一轮。然后选择现在用的 SKILL.md。');
   } else if (!bound) {
-    hero('第二步', '选择现在用的 FVA 文件夹',
-      '选打开后就能看到 SKILL.md 的文件夹。客户端会记住它。', 'bind', '选择 FVA 文件夹',
+    hero('第二步', '选择现在用的 SKILL.md',
+      '选正在使用的那份 SKILL.md，客户端会自动记住它所在的文件夹。', 'bind', '选择 SKILL.md',
       workspace ? '升级前的工作文件夹会保留在原处。' : '以后照常在原处用 WorkBuddy 或 Codex 修改。');
   } else if (finished && !pending) {
     hero('本轮审核已结束', '准备下一轮修改',
@@ -122,7 +122,7 @@ function render() {
   } else {
     hero('已记住 FVA 文件夹', '在原处修改 FVA',
       '用 WorkBuddy 或 Codex 改好并保存。回到这里查看全部改动，再发给团队审核。', 'open', '打开 FVA 文件夹',
-      pending ? '换文件夹前，请先继续发送，或保留文件再开始新一轮。' : '');
+      pending ? '更换 SKILL.md 前，请先继续发送，或保留文件再开始新一轮。' : '');
   }
 
   const directory = workspace?.path || '';
@@ -177,9 +177,9 @@ function renderWorkflow() {
   say('flow-label', workspace?.bound ? '日常协作' : '第一次参与');
   say('step-login-label', authenticated ? '已登录 · 查看状态' : '登录 GitHub');
   say('step-folder-label', accessLabel || (workspace?.pending ? '先处理上次改动'
-    : updatePreview ? '先关闭更新预览' : workspace?.bound ? '已选择 · 更换文件夹' : '选择文件夹'));
+    : updatePreview ? '先关闭更新预览' : workspace?.bound ? '已选择 · 更换 SKILL.md' : '选择 SKILL.md'));
   say('step-review-label', accessLabel || (workspace?.pending ? '先处理上次改动'
-    : workspace?.bound ? '前往查看改动' : '先选文件夹'));
+    : workspace?.bound ? '前往查看改动' : '先选 SKILL.md'));
   for (const step of ['step-login', 'step-folder', 'step-review']) disable(step, blocked);
 }
 
@@ -398,12 +398,12 @@ function bindWorkspace() {
   run('绑定 FVA 文件夹', async () => {
     const workspace = await api.bindWorkspace();
     if (!workspace) return;
-    if (!workspace.bound) throw new Error('没能记住 FVA 文件夹，请重新选择。');
+    if (!workspace.bound) throw new Error('没能记住 SKILL.md 所在的文件夹，请重新选择。');
     setWorkspace(workspace);
     await optional(fetchStatus);
-    if (!account()?.bound) throw new Error('当前账号还没有选择 FVA 文件夹。请重新选择。');
+    if (!account()?.bound) throw new Error('当前账号还没有选择 SKILL.md。请重新选择。');
     await optional(fetchChanges);
-    return '已记住 FVA 文件夹。继续在原处改文件即可。';
+    return '已记住 SKILL.md 所在的文件夹。继续在原处改文件即可。';
   });
 }
 
@@ -623,7 +623,7 @@ function submit(input) {
       await optional(fetchChanges);
       return '已发给团队审核 #' + result.number + '。可在下方查看进度，团队采用后才进入正式版本。';
     }
-    return '上次的改动已发给团队审核 #' + result.number + '。现在可以选择 FVA 文件夹。';
+    return '上次的改动已发给团队审核 #' + result.number + '。现在可以选择 SKILL.md。';
   });
 }
 
@@ -678,7 +678,7 @@ function openNavigation(view) {
 
 function locateTeamUpdates() {
   if (!account()?.bound) {
-    message('updates-entry-notice', '请先选择现在用的 FVA 文件夹，再在工作台查看团队更新。');
+    message('updates-entry-notice', '请先选择现在用的 SKILL.md，再在工作台查看团队更新。');
     return;
   }
   id('team-updates-title').focus({ preventScroll: true });
@@ -767,12 +767,12 @@ id('step-login').addEventListener('click', () => {
 id('step-folder').addEventListener('click', () => {
   if (!canUseWorkflow() || !guideWorkflowAccess() || guidePendingWork()) return;
   if (updatePreview) {
-    notice('请先关闭团队更新预览，再选择文件夹。');
+    notice('请先关闭团队更新预览，再选择 SKILL.md。');
     focusWorkflowTarget('updates-title');
     return;
   }
   if (!api.bindWorkspace) {
-    notice('客户端暂时无法选择文件夹。请重新打开后再试。');
+    notice('客户端暂时无法选择 SKILL.md。请重新打开后再试。');
     return;
   }
   bindWorkspace();
@@ -780,7 +780,7 @@ id('step-folder').addEventListener('click', () => {
 id('step-review').addEventListener('click', () => {
   if (!canUseWorkflow() || !guideWorkflowAccess() || guidePendingWork()) return;
   if (!account()?.bound) {
-    notice('请先选择现在用的 FVA 文件夹，再查看要发给团队的改动。');
+    notice('请先选择现在用的 SKILL.md，再查看要发给团队的改动。');
     focusWorkflowHero();
     return;
   }
@@ -804,7 +804,7 @@ id('recover-workspace').addEventListener('click', () => run('另开审核任务'
     await optional(fetchChanges);
     return '可以开始下一轮了。继续用原来的 FVA 文件夹，并查看本次全部改动。';
   }
-  return '旧文件已保留在 ' + previousPath + '。现在可以选择 FVA 文件夹。';
+  return '旧文件已保留在 ' + previousPath + '。现在可以选择 SKILL.md。';
 }));
 id('check-review').addEventListener('click', () => run('查询审核结果', async () => {
   review = await api.reviewStatus();

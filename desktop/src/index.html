@@ -71,7 +71,7 @@
                 <button id="primary-action" type="button" class="button button-primary" hidden><span id="primary-label"></span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button>
                 <button id="permission-link" type="button" class="button button-secondary" data-external="repository" hidden>在浏览器查看项目权限 <svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button>
                 <button id="previous-folder" type="button" class="button button-secondary" hidden><svg class="icon" aria-hidden="true"><use href="#i-folder"></use></svg>打开 FVA 文件夹</button>
-                <button id="rebind-workspace" type="button" class="button button-secondary" aria-describedby="action-caption" hidden>更换 FVA 文件夹</button>
+                <button id="rebind-workspace" type="button" class="button button-secondary" aria-describedby="action-caption" hidden>更换 SKILL.md</button>
               </div>
               <p id="action-caption" class="caption" hidden></p>
               <p id="location" class="location" hidden></p>
@@ -102,7 +102,7 @@
                 <span class="step-index" aria-hidden="true">01</span><span class="flow-step-copy"><strong>登录账号</strong><span>用团队已开通权限的 GitHub 账号登录。</span><span class="flow-step-action"><span id="step-login-label">登录 GitHub</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
               </button></li>
               <li><button id="step-folder" class="flow-step" type="button" disabled>
-                <span class="step-index" aria-hidden="true">02</span><span class="flow-step-copy"><strong>选 FVA 文件夹</strong><span>选好后，照常用 WorkBuddy 或 Codex 修改并保存。</span><span class="flow-step-action"><span id="step-folder-label">选择文件夹</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
+                <span class="step-index" aria-hidden="true">02</span><span class="flow-step-copy"><strong>选择 SKILL.md</strong><span>选正在使用的那份 SKILL.md，客户端会记住它所在的文件夹。</span><span class="flow-step-action"><span id="step-folder-label">选择 SKILL.md</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
               </button></li>
               <li><button id="step-review" class="flow-step" type="button" disabled>
                 <span class="step-index" aria-hidden="true">03</span><span class="flow-step-copy"><strong>发给团队审核</strong><span>查看本次全部改动，写一句说明，再发送。</span><span class="flow-step-action"><span id="step-review-label">前往查看改动</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
@@ -227,7 +227,7 @@
               <p id="doc-count" class="caption" role="status"></p>
             </div>
             <ul class="doc-list">
-              <li data-doc-category="guide"><button type="button" data-local-view="help"><svg class="icon" aria-hidden="true"><use href="#i-help"></use></svg><span><strong>第一次参与 FVA</strong><small>登录、选文件夹、发改动、查看结果。</small><small class="doc-source">客户端使用帮助</small></span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button></li>
+              <li data-doc-category="guide"><button type="button" data-local-view="help"><svg class="icon" aria-hidden="true"><use href="#i-help"></use></svg><span><strong>第一次参与 FVA</strong><small>登录、选择 SKILL.md、发改动、查看结果。</small><small class="doc-source">客户端使用帮助</small></span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button></li>
               <li data-doc-category="project"><button type="button" data-external="skill"><svg class="icon" aria-hidden="true"><use href="#i-file"></use></svg><span><strong>FVA Skill 说明</strong><small>了解 FVA 的用途、适用任务和工作流程。</small><small class="doc-source">SKILL.md · 浏览器原文</small></span><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button></li>
               <li data-doc-category="guide"><button type="button" data-external="install"><svg class="icon" aria-hidden="true"><use href="#i-file"></use></svg><span><strong>FVA 安装与接入</strong><small>查看安装及接入说明。</small><small class="doc-source">INSTALL.md · 浏览器原文</small></span><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button></li>
               <li data-doc-category="project"><button type="button" data-external="structure"><svg class="icon" aria-hidden="true"><use href="#i-file"></use></svg><span><strong>FVA 项目结构</strong><small>了解各个目录和文件的用途。</small><small class="doc-source">STRUCTURE.md · 浏览器原文</small></span><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button></li>
@@ -239,12 +239,12 @@
         </div>
 
         <div id="help-page" class="page" hidden>
-          <div class="page-header"><p class="eyebrow">共创入门</p><h1 id="help-heading" tabindex="-1">使用帮助</h1><p>从选择 FVA 文件夹开始，一步步把改动发给团队。</p></div>
+          <div class="page-header"><p class="eyebrow">共创入门</p><h1 id="help-heading" tabindex="-1">使用帮助</h1><p>从选择 SKILL.md 开始，一步步把改动发给团队。</p></div>
           <section class="card help-card" aria-labelledby="help-title">
             <div class="card-header"><div><p class="section-label">第一次参与</p><h2 id="help-title">完成一次共创</h2></div></div>
             <ol class="help-list">
               <li><span class="step-index">01</span><div><strong>用团队账号登录</strong><p>GitHub 是团队保存文件和审核改动的地方。在工作台点「登录 GitHub」，按浏览器提示完成登录。</p></div></li>
-              <li><span class="step-index">02</span><div><strong>选择现在用的 FVA 文件夹</strong><p>选择打开后就能看到 SKILL.md 的文件夹。客户端会记住它。以后仍在原处用 WorkBuddy 或 Codex 改文件。</p></div></li>
+              <li><span class="step-index">02</span><div><strong>选择 SKILL.md</strong><p>选正在使用的那份 SKILL.md。客户端会记住它所在的文件夹。以后仍在原处用 WorkBuddy 或 Codex 改文件。</p></div></li>
               <li><span class="step-index">03</span><div><strong>查看改动，发给团队审核</strong><p>保存后回到工作台，点「刷新改动」。检查全部改动，包括删除。写一句说明，再点「发给团队审核」。</p></div></li>
               <li><span class="step-index">04</span><div><strong>看审核进度，按需更新</strong><p>点「刷新审核进度」看结果。要更新自己的 FVA，先看哪些文件会变，再确认。需要时可以恢复更新前的文件。</p></div></li>
             </ol>
@@ -253,7 +253,7 @@
             <div class="card-header"><div><h2 id="questions-title">常见问题</h2></div></div>
             <details><summary>为什么进不了项目或发不了改动？</summary><p>请确认浏览器和客户端都在用团队已开通权限的 GitHub 账号。仍有问题时，请联系项目负责人。</p></details>
             <details><summary>为什么这一批改动发不出去？</summary><p>一次发送必须包含这次的全部改动。有文件不能发送时，请看文件旁的原因，处理后再刷新。一次最多发送 100 个文件。</p></details>
-            <details><summary>刚选好文件夹，为什么已经有改动？</summary><p>客户端会拿你的文件和团队当时的版本对照。之前改过的文件也会列出。从来没有安装过的文件不会算作你删除了它。</p></details>
+            <details><summary>刚选好 SKILL.md，为什么已经有改动？</summary><p>客户端会拿文件夹里的文件和团队当时的版本对照。之前改过的文件也会列出。从来没有安装过的文件不会算作你删除了它。</p></details>
             <details><summary>选了「保留我的版本」，怎样继续发送？</summary><p>先在原文件中补上你需要的团队改动，再检查更新。如仍需选择，选「保留我的版本」并确认更新。</p></details>
             <details><summary>怎么知道团队采用了我的改动？</summary><p>审核进度显示「已采用」时，改动已经进入团队正式版本。刚发出时，请等团队审核。</p></details>
           </section>

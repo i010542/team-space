@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, protocol, net, session, shell, dialog } = require('electron');
 const path = require('node:path');
+const fs = require('node:fs/promises');
 const { pathToFileURL } = require('node:url');
 const { createService } = require('./core.cjs');
 const { launchActivation, secondActivation, createNavigationQueue } = require('./deep-link.cjs');
@@ -80,11 +81,16 @@ function wire() {
             if (!window?.isDestroyed()) window.webContents.send('team-space:progress', progress);
           });
         } else if (name === 'bindWorkspace') {
-          const selected = await dialog.showOpenDialog(window, {title:'选择正在使用的 FVA 文件夹（直接包含 SKILL.md）',properties:['openDirectory'],buttonLabel:'选择这份 FVA'});
+          const selected = await dialog.showOpenDialog(window, {title:'选择正在使用的 SKILL.md',properties:['openFile'],filters:[{name:'Skill 说明文件（SKILL.md）',extensions:['md']}],buttonLabel:'选择这份 SKILL.md'});
           if(selected.canceled || selected.filePaths.length !== 1) return {ok:true,value:null};
-          const answer = await dialog.showMessageBox(window,{type:'question',title:'记住我的 FVA 文件夹',message:'以后都从这个文件夹查看你的修改？',detail:selected.filePaths[0]+'\n\n你继续在原来的工具里使用和修改这份 FVA。这里会记住它的位置，先与团队版本比较；等你选好文件并确认后，才会发给团队审核。选择文件夹不会搬动或改写其中的文件。',buttons:['取消','使用这个文件夹'],defaultId:0,cancelId:0,noLink:true});
+          const skillPath = selected.filePaths[0];
+          if (!path.isAbsolute(skillPath) || path.basename(skillPath).toLowerCase() !== 'skill.md') throw new Error('请选择正在使用的 SKILL.md 文件。');
+          const skillFile = await fs.lstat(skillPath).catch(() => null);
+          if (!skillFile?.isFile() || skillFile.isSymbolicLink()) throw new Error('请选择实际存在的 SKILL.md 文件，不能选择文件夹或快捷链接。');
+          const directory = path.dirname(skillPath);
+          const answer = await dialog.showMessageBox(window,{type:'question',title:'使用这份 Skill',message:'记住 SKILL.md 所在的文件夹？',detail:skillPath+'\n\nSkill 文件夹：'+directory+'\n\n以后照常在原来的工具中使用和修改。客户端会检查这个文件夹内的全部 Skill 改动，不只是 SKILL.md；确认发送后才会交给团队审核。选择文件不会搬动或改写现有内容。',buttons:['取消','使用这份 Skill'],defaultId:0,cancelId:0,noLink:true});
           if(answer.response!==1)return {ok:true,value:null};
-          value=await service.bindWorkspace(selected.filePaths[0]);
+          value=await service.bindWorkspace(directory);
         } else if (name === 'updateWorkspace') {
           updatePreview = null;
           value = await service.updateWorkspace();
