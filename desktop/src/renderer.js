@@ -29,7 +29,6 @@ let primary = '';
 let selected = new Set();
 let summaries = [];
 let deviceOpening = false;
-let focusTimer;
 let needsRefresh = false;
 let updatePreview;
 let updateStale = false;
@@ -49,7 +48,10 @@ function message(target, value) {
 }
 function notice(value) { message('notice', value); }
 function displayError(error) {
-  message('error', error?.message || '操作未完成，请检查网络后重试。');
+  const panel = id('error');
+  if (!panel) return;
+  panel.textContent = error?.message || '操作未完成，请检查网络后重试。';
+  panel.hidden = false;
 }
 
 function hero(tag, title, description, action, label, caption = '') {
@@ -184,7 +186,6 @@ function renderWorkflow() {
 }
 
 function focusWorkflowTarget(target) {
-  clearTimeout(focusTimer);
   const destination = id(target);
   destination.focus({ preventScroll: true });
   destination.scrollIntoView({ block: 'start' });
@@ -337,11 +338,21 @@ function renderFiles(next) {
 }
 
 async function fetchChanges() {
+  const wait = setTimeout(() => {
+    const progress = id('notice');
+    if (busy && progress) {
+      progress.textContent = '仍在等待读取结果，请不要重复操作。';
+      progress.hidden = false;
+    }
+  }, 15000);
   let next;
-  try { next = await api.changes(); }
-  catch (error) {
+  try {
+    next = await api.changes();
+  } catch (error) {
     clearPreview();
     throw error;
+  } finally {
+    clearTimeout(wait);
   }
   setWorkspace(next.workspace);
   renderFiles(next);
@@ -354,21 +365,39 @@ async function optional(operation) {
 
 async function run(label, operation) {
   if (busy || !api) return;
-  clearTimeout(focusTimer);
   busy = label;
-  message('error', '');
-  notice(progressMessages[label] || label + '中…');
-  render();
+  let operationStarted = false;
   try {
+    message('error', '');
+    notice(progressMessages[label] || label + '中…');
+    render();
+    operationStarted = true;
     const success = await operation();
     notice(success || '');
   } catch (error) {
-    notice('');
-    displayError(error);
+    showOperationError(operationStarted ? error : new Error('工作台界面未能刷新。请重试这一步。'));
   } finally {
     busy = '';
-    render();
+    renderIdle();
     void receiveNavigation();
+  }
+}
+
+function showOperationError(error) {
+  const progress = id('notice');
+  if (progress) {
+    progress.textContent = '';
+    progress.hidden = true;
+  }
+  displayError(error);
+}
+
+function renderIdle() {
+  try { render(); }
+  catch {
+    // Only retry drawing the view. The operation has already finished.
+    try { render(); }
+    catch { showOperationError(new Error('工作台界面未能刷新。请重新打开客户端，并查看上次操作的结果。')); }
   }
 }
 
@@ -578,28 +607,10 @@ function restoreUpdate() {
   });
 }
 
-function refreshOnFocus() {
-  if (updatePreview && preview?.files.length && !busy) {
-    needsRefresh = true;
-    render();
-  }
-  const canRefresh = () => !busy && canWork() && account()?.bound && !account().pending &&
-    !updatePreview && !status?.recoveryRequired && !id('work-page').hidden;
-  const markStale = () => {
-    needsRefresh = true;
-    render();
-  };
-  clearTimeout(focusTimer);
-  if (!canRefresh()) return;
-  if (hasChangeDraft()) {
-    markStale();
-    return;
-  }
-  focusTimer = setTimeout(() => {
-    if (!canRefresh()) return;
-    if (hasChangeDraft()) markStale();
-    else run('读取本机改动', fetchChanges);
-  }, 350);
+function remindRefreshOnFocus() {
+  if (busy || needsRefresh || !canWork() || !account()?.bound || account().pending || status?.recoveryRequired) return;
+  needsRefresh = true;
+  renderIdle();
 }
 
 function submit(input) {
@@ -657,7 +668,6 @@ function renderNavigation() {
 }
 
 function openNavigation(view) {
-  clearTimeout(focusTimer);
   if (view === 'docs') {
     navigate('docs', '项目资料');
     return;
@@ -891,7 +901,7 @@ if (api) {
   if (typeof unsubscribeNavigation === 'function') window.addEventListener('beforeunload', unsubscribeNavigation, { once: true });
   navigationReady = Boolean(api.takeNavigation);
   if (navigationReady) signalNavigation();
-  window.addEventListener('focus', refreshOnFocus);
+  window.addEventListener('focus', remindRefreshOnFocus);
   run('检查工作台', async () => {
     await fetchStatus();
     if (canWork() && account()?.bound && !account()?.pending && !status?.recoveryRequired) await optional(fetchChanges);
