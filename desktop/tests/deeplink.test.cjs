@@ -59,6 +59,30 @@ test("queues only supported views, coalesces repeated clicks, and bounds early r
   assert.equal(routes.at(-1).view, "workspace");
 });
 
+test("accepts the second skill routes and rejects lookalikes", () => {
+  const ad = "teamspace-app://project/ugc-reference-ad-workflow";
+  assert.deepEqual(launchActivation([exe, ad]), { focus: true, navigation: { project: "ugc-reference-ad-workflow", view: "workspace" } });
+  assert.deepEqual(launchActivation([exe, "--", ad + "/docs"]), { focus: true, navigation: { project: "ugc-reference-ad-workflow", view: "docs" } });
+  assert.deepEqual(launchActivation([exe, ad + "/updates"]), { focus: true, navigation: { project: "ugc-reference-ad-workflow", view: "updates" } });
+  const rejected = { focus: false, navigation: null };
+  for (const url of [
+    ad + "/docs/extra", ad + "/extra", ad + "?x=1", ad + "/", ad + "/docs/",
+    "teamspace-app://project/UGC-reference-ad-workflow",
+    "teamspace-app://project/ugc-reference-ad-workflowx",
+    "teamspace-app://project/FVA", "teamspace-app://project/Fva/docs",
+  ]) assert.deepEqual(launchActivation([exe, url]), rejected, url);
+  assert.deepEqual(secondActivation({ focus: true, navigation: { project: "ugc-reference-ad-workflow", view: "docs" } }),
+    { focus: true, navigation: { project: "ugc-reference-ad-workflow", view: "docs" } });
+  assert.equal(secondActivation({ focus: true, navigation: { project: "nope", view: "docs" } }), null);
+  assert.equal(secondActivation({ focus: true, navigation: { project: "FVA", view: "workspace" } }), null);
+  const queue = createNavigationQueue();
+  queue.enqueue({ project: "ugc-reference-ad-workflow", view: "updates" });
+  queue.enqueue({ project: "missing", view: "docs" });
+  queue.enqueue({ project: "ugc-reference-ad-workflow", view: "updates", extra: true });
+  assert.deepEqual(queue.take(), { project: "ugc-reference-ad-workflow", view: "updates" });
+  assert.equal(queue.take(), null);
+});
+
 test("NSIS explicitly installs the quoted external scheme and uninstalls only its own command", () => {
   const root = path.join(__dirname, "..");
   const { build } = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));

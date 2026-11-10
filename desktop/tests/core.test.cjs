@@ -5,6 +5,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 const { createService } = require("../src/core.cjs");
+const { projectById } = require("../src/projects.cjs");
 const { runProcess, asText } = require("../src/core/process.cjs");
 
 const gitPath = process.env.TEST_GIT_PATH || "git";
@@ -23,7 +24,10 @@ async function git(cwd, ...args) {
   return asText(result.stdout).trim();
 }
 
-async function fixture(t) {
+async function fixture(t, project) {
+  const repo = project?.repo || "i010542/fva";
+  const originUrl = "https://github.com/" + repo + ".git";
+  const reviewUrl = "https://github.com/" + repo + "/pull/41";
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "team-space-core-"));
   t.after(() => fs.rm(dir, { recursive: true, force: true }));
   const remote = path.join(dir, "remote.git");
@@ -41,7 +45,9 @@ async function fixture(t) {
   await git(seed, "push", "origin", "main");
 
   const fakeGh = { offline: false, loggedIn: true, authorized: true, login: "example-user", review: null, failCreate: 0, createCalls: 0, pushes: 0, failPush: 0, failClone: 0, failUpdateRef: 0, endReviewOnPush: null, pushedSha: null, switchLoginOnPush: null };
+  const commands = [];
   const run = async (binary, args, options) => {
+    commands.push(args.join(" "));
     if (binary === ghPath) {
       if (args[0] === "--version") return fake("gh version 2");
       if (fakeGh.offline) throw new Error("Simulated offline GitHub");
@@ -54,14 +60,14 @@ async function fixture(t) {
       }
       if (args[0] === "auth" && args[1] === "token") return fake("synthetic-test-value\n");
       if (args[0] === "api" && args[3] === "user") return fake(JSON.stringify({ login: fakeGh.login, id: 123 }));
-      if (args[0] === "api" && args[3] === "repos/i010542/fva") return fake(String(fakeGh.authorized));
+      if (args[0] === "api" && args[3] === "repos/" + repo) return fake(String(fakeGh.authorized));
       if (args[0] === "pr" && args[1] === "list") return fake(JSON.stringify(fakeGh.review ? [fakeGh.review] : []));
       if (args[0] === "pr" && args[1] === "create") {
         assert.equal(options.env.GH_TOKEN, "synthetic-test-value");
         fakeGh.createCalls++;
         if (fakeGh.failCreate-- > 0) return fake("", 1);
-        fakeGh.review = { url: prUrl, number: 41, state: "OPEN", headRefName: args[args.indexOf("--head") + 1], headRefOid: fakeGh.pushedSha, isCrossRepository: false };
-        return fake(prUrl);
+        fakeGh.review = { url: reviewUrl, number: 41, state: "OPEN", headRefName: args[args.indexOf("--head") + 1], headRefOid: fakeGh.pushedSha, isCrossRepository: false };
+        return fake(reviewUrl);
       }
       throw new Error("Unexpected fake gh command");
     }
@@ -76,7 +82,7 @@ async function fixture(t) {
       options.env = { ...options.env,
         GIT_CONFIG_COUNT: "2",
         GIT_CONFIG_KEY_1: "url." + pathToFileURL(remote).href + ".insteadOf",
-        GIT_CONFIG_VALUE_1: publicOrigin,
+        GIT_CONFIG_VALUE_1: originUrl,
       };
     }
     const result = await runProcess(binary, args, options);
@@ -90,8 +96,8 @@ async function fixture(t) {
     }
     return result;
   };
-  const makeService = () => createService({ root, gitPath, ghPath, run });
-  return { dir, seed, root, remote, fakeGh, makeService, service: makeService() };
+  const makeService = (extra) => createService({ root, gitPath, ghPath, run, ...(project ? { project } : {}), ...extra });
+  return { dir, seed, root, remote, fakeGh, makeService, commands, originUrl, repo, service: makeService() };
 }
 
 async function retryInput(service) {
@@ -161,7 +167,7 @@ test("rejects sensitive and nontext paths, and checks file fingerprints, branch 
   assert.equal(preview.files.filter((file) => file.eligible).length, 1);
   assert.equal(preview.files.find((file) => file.eligible).path, "SKILL.md");
   assert.match(preview.files.find((file) => file.path === "token.txt").reason, /访问凭据/);
-  await assert.rejects(service.submit({ title: "Escape", previewId: preview.previewId, files: ["../evil"] }), /有效文件/);
+  await assert.rejects(service.submit({ title: "Escape", previewId: preview.previewId, files: ["../evil"] }), /有效的改动文件/);
   await fs.writeFile(path.join(workspace.path, "SKILL.md"), "changed after preview\n");
   await assert.rejects(service.submit({ title: "Stale", previewId: preview.previewId, files: ["SKILL.md"] }), /预览后的文件已变化/);
   assert.equal(await git(workspace.path, "rev-parse", "HEAD"), workspace.baseSha);
@@ -505,6 +511,10 @@ test("rejects invalid bind roots and ancestor links, and verifies installed-file
   await assert.rejects(service.bindWorkspace(dir), /具体目录/);
   await assert.rejects(service.bindWorkspace(root), /具体目录/);
   await assert.rejects(service.bindWorkspace(path.join(root, "nested")), /具体目录/);
+  const otherData = path.join(dir, "workspaces-ugc-reference-ad-workflow");
+  await fs.mkdir(path.join(otherData, "nested"), { recursive: true });
+  await assert.rejects(service.bindWorkspace(otherData), /具体目录/);
+  await assert.rejects(service.bindWorkspace(path.join(otherData, "nested")), /具体目录/);
   const invalid = path.join(dir, "another-skill");
   await fs.mkdir(invalid);
   await fs.writeFile(path.join(invalid, "SKILL.md"), "---\nname: other\n---\n");
@@ -873,4 +883,46 @@ test("installation does not write through a differently spelled Windows director
   await service.applyUpdates({ previewId: preview.previewId, resolutions: {} });
   assert.deepEqual(await fs.readdir(path.join(live, "Foo")), ["personal.md"]);
   assert.equal(await fs.readFile(path.join(live, "Foo", "personal.md"), "utf8"), "local text\n");
+});
+
+test("each skill service targets only its own repository", async (t) => {
+  const ad = projectById("ugc-reference-ad-workflow");
+  const cases = [
+    [undefined, "i010542/ugc-reference-ad-workflow"],
+    [ad, "i010542/fva"],
+  ];
+  for (const [project, other] of cases) {
+    const repo = project?.repo || "i010542/fva";
+    const { service, commands, fakeGh, dir, originUrl } = await fixture(t, project);
+    const live = path.join(dir, "installed-skill");
+    await fs.mkdir(live);
+    const skillName = project?.skillName || "fva";
+    await fs.writeFile(path.join(live, "SKILL.md"), "---\nname: " + skillName + "\n---\ninstalled\n");
+    const workspace = await service.bindWorkspace(live);
+    await service.updateWorkspace().catch(() => {});
+    fakeGh.review = {
+      url: "https://github.com/" + other + "/pull/9", number: 9, state: "OPEN",
+      headRefName: workspace.branch, headRefOid: workspace.baseSha, isCrossRepository: false,
+    };
+    assert.deepEqual(await service.reviewStatus(), { state: "none" });
+    fakeGh.review = null;
+    await fs.writeFile(path.join(live, "SKILL.md"), "---\nname: " + skillName + "\n---\nchanged\n");
+    const preview = await service.changes();
+    const submitted = await service.submit({ title: "隔离检查", previewId: preview.previewId, files: ["SKILL.md"] });
+    const escaped = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    assert.match(submitted.prUrl, new RegExp("https://github.com/" + escaped(repo) + "/pull/"));
+    const log = commands.join("\n");
+    assert.match(log, new RegExp("repos/" + escaped(repo)));
+    assert.match(log, new RegExp(escaped(originUrl)));
+    assert.match(log, /\bfetch\b/);
+    assert.match(log, /\bpush\b/);
+    assert.match(log, /pr create/);
+    assert.doesNotMatch(log, new RegExp(escaped(other)));
+    assert.equal(await git(workspace.gitPath, "remote", "get-url", "origin"), originUrl);
+    if (!project) {
+      assert.equal(path.basename(path.dirname(workspace.gitPath)), "workspaces");
+      const stateFile = path.join(path.dirname(workspace.gitPath), ".state", "example-user.json");
+      assert.equal(JSON.parse(await fs.readFile(stateFile, "utf8")).branch, workspace.branch);
+    }
+  }
 });

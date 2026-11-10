@@ -1,34 +1,41 @@
 const { app, BrowserWindow, ipcMain, protocol, net, session, shell, dialog } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs/promises');
+const fsSync = require('node:fs');
 const { pathToFileURL } = require('node:url');
 const { createService } = require('./core.cjs');
 const { launchActivation, secondActivation, createNavigationQueue } = require('./deep-link.cjs');
+const { projects, projectById, publicProject, rememberedId, chooseProject } = require('./projects.cjs');
+const { externalUrl } = require('./links.cjs');
+const { spaced } = require('./text.cjs');
+const { readUsageFile, usageRequest } = require('./core/usage.cjs');
 protocol.registerSchemesAsPrivileged([{ scheme: 'teamspace', privileges: { standard: true, secure: true, supportFetchAPI: false } }]);
 app.setName('Team Space');
-let window, service, busy = false, updatePreview = null;
+let window, services = new Map(), activeId = 'fva', busy = false, inflight = 0, updatePreview = null;
 let windowReady = false, focusPending = false;
 const navigation = createNavigationQueue();
 const pages = new Set(['/index.html', '/styles.css', '/renderer.js']);
-const external = Object.freeze({
-  repository: 'https://github.com/i010542/fva',
-  branches: 'https://github.com/i010542/fva/branches',
-  pulls: 'https://github.com/i010542/fva/pulls',
-  issues: 'https://github.com/i010542/fva/issues',
-  skill: 'https://github.com/i010542/fva/blob/main/SKILL.md',
-  install: 'https://github.com/i010542/fva/blob/main/INSTALL.md',
-  structure: 'https://github.com/i010542/fva/blob/main/STRUCTURE.md',
-  changelog: 'https://github.com/i010542/fva/blob/main/CHANGELOG.md',
-  device: 'https://github.com/login/device',
-  portal: 'https://i010542.github.io/team-space/',
-  portalFiles: 'https://i010542.github.io/team-space/team/files/',
-  portalVersions: 'https://i010542.github.io/team-space/team/versions/',
-  portalReviews: 'https://i010542.github.io/team-space/team/reviews/',
-  portalSuggestions: 'https://i010542.github.io/team-space/team/suggestions/',
-  portalFva: 'https://i010542.github.io/team-space/projects/fva/',
-  portalDocs: 'https://i010542.github.io/team-space/docs/'
-});
-const mutators = new Set(['login', 'startWorkspace', 'submit', 'updateWorkspace', 'recoverWorkspace', 'bindWorkspace', 'applyUpdates', 'restoreUpdate']);
+function activeProject() { return projectById(activeId) || projectById('fva'); }
+async function otherBindings(projectId, account) {
+  const found = [];
+  for (const project of projects) {
+    if (project.id === projectId) continue;
+    const other = services.get(project.id);
+    if (typeof other?.binding !== 'function') continue;
+    for (const boundPath of await other.binding(account)) found.push({ name: project.name, path: boundPath });
+  }
+  return found;
+}
+function readRemembered(userData) {
+  try { return rememberedId(JSON.parse(fsSync.readFileSync(path.join(userData, 'active-project.json'), 'utf8'))); }
+  catch { return 'fva'; }
+}
+async function rememberProject(userData, id) {
+  await fs.mkdir(userData, { recursive: true });
+  await fs.writeFile(path.join(userData, 'active-project.json'), JSON.stringify({ id }) + '\n', { mode: 0o600 });
+}
+const mutators = new Set(['login', 'startWorkspace', 'submit', 'updateWorkspace', 'recoverWorkspace', 'bindWorkspace', 'applyUpdates', 'restoreUpdate', 'usageImport', 'usageSave']);
+const usageFields = Object.freeze({ usageList: ['page'], usageDetail: ['number'], usageSave: ['title', 'tool', 'text'] });
 function safeError(error) {
   return String(error?.message || '操作未完成，请重试。')
     .replace(/(?:gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+)/g, '[已隐藏]')
@@ -55,22 +62,61 @@ function wire() {
     if (!trusted(event) || input !== undefined) return {ok:false,error:'不允许的导航请求。'};
     return {ok:true,value:busy ? null : navigation.take()};
   });
-  for (const name of ['status','login','startWorkspace','bindWorkspace','changes','submit','openWorkspace','updateWorkspace','applyUpdates','restoreUpdate','recoverWorkspace','reviewStatus','openExternal']) {
+  ipcMain.handle('team-space:projects', async (event, input) => {
+    if (!trusted(event) || input !== undefined) return {ok:false,error:'不允许的页面请求。'};
+    return {ok:true,value:{activeProject:activeProject().id,projects:projects.map(publicProject)}};
+  });
+  ipcMain.handle('team-space:selectProject', async (event, input) => {
+    if (!trusted(event)) return {ok:false,error:'不允许的页面请求。'};
+    if (busy || inflight > 0) return {ok:false,error:'正在处理上一项操作，请稍候再切换。'};
+    const choice = chooseProject(input, false);
+    if (!choice.ok) return {ok:false,error:choice.error};
+    inflight += 1;
+    try {
+      if (choice.project.id !== activeId) {
+        await rememberProject(app.getPath('userData'), choice.project.id);
+        updatePreview = null;
+        activeId = choice.project.id;
+      }
+      return {ok:true,value:{id:choice.project.id,name:choice.project.name}};
+    } catch { return {ok:false,error:'没能记住要使用的 Skill，请重试。'}; }
+    finally { inflight -= 1; }
+  });
+  for (const name of ['status','login','startWorkspace','bindWorkspace','changes','submit','openWorkspace','updateWorkspace','applyUpdates','restoreUpdate','recoverWorkspace','reviewStatus','openExternal','usageList','usageDetail','usageImport','usageSave','usageOpen']) {
     ipcMain.handle('team-space:' + name, async (event, input) => {
       if (!trusted(event)) return {ok:false,error:'不允许的页面请求。'};
       if (busy && !(name === 'openExternal' && input === 'device')) return {ok:false,error:'正在处理上一项操作，请稍候。'};
+      const project = activeProject();
+      const service = services.get(project.id);
+      const sayProject = (before, after = '') => spaced(before, project.name, after);
       const mutate = mutators.has(name);
       if (mutate) busy = true;
+      inflight += 1;
       try {
         let value;
         if (name === 'openExternal') {
-          let url = typeof input === 'string' && Object.hasOwn(external,input) ? external[input] : null;
+          let url = externalUrl(project, input);
           if (input === 'pr') {
             const review = await service.reviewStatus();
-            if (/^https:\/\/github\.com\/i010542\/fva\/pull\/[1-9]\d*$/.test(review.url || '')) url = review.url;
+            url = externalUrl(project, 'pr', review.url);
           }
           if (!url) throw new Error('这个链接暂时不可用。');
           await shell.openExternal(url); value = true;
+        } else if (name === 'usageImport') {
+          usageRequest(project, input, []);
+          const selected = await dialog.showOpenDialog(window, {title:'选择聊天文本',properties:['openFile'],filters:[{name:'文本文件（Markdown 或 TXT）',extensions:['md','txt']}],buttonLabel:'导入文本'});
+          if (selected.canceled || selected.filePaths.length !== 1) return {ok:true,value:null};
+          value = { text: await readUsageFile(selected.filePaths[0]) };
+        } else if (name === 'usageOpen') {
+          usageRequest(project, input, ['number']);
+          if (!Number.isSafeInteger(input.number) || input.number < 1) throw new Error('使用记录编号不正确。');
+          const url = await service.usageOpen(input);
+          if (url !== 'https://github.com/' + project.repo + '/issues/' + input.number) throw new Error('这个链接暂时不可用。');
+          await shell.openExternal(url);
+          value = true;
+        } else if (Object.hasOwn(usageFields, name)) {
+          usageRequest(project, input, usageFields[name]);
+          value = await service[name](input);
         } else if (name === 'openWorkspace') {
           const directory = await service.openWorkspace();
           const result = await shell.openPath(directory);
@@ -101,11 +147,11 @@ function wire() {
           const choices = input.resolutions;
           if (!choices || typeof choices !== 'object' || Array.isArray(choices) || Object.keys(choices).length > 500 || Object.values(choices).some(choice => choice !== 'mine' && choice !== 'team')) throw new Error('有些文件需要你确认，请逐个选择用哪一份。');
           const current = await service.status();
-          if (!current.workspace?.bound || current.workspace.id !== updatePreview.workspace.id || current.recoveryRequired) throw new Error('FVA 文件夹或当前任务已变化，请回到工作台重新检查。');
+          if (!current.workspace?.bound || current.workspace.id !== updatePreview.workspace.id || current.recoveryRequired) throw new Error(sayProject('', '文件夹或当前任务已变化，请回到工作台重新检查。'));
           const conflicts = updatePreview.files.filter(file => file.status === 'conflict');
           if (conflicts.some(file => !Object.hasOwn(choices, file.path)) || Object.keys(choices).some(name => !conflicts.some(file => file.path === name))) throw new Error('请为每个需要确认的文件选好用哪一份，再更新。');
           const selectedTeam = Object.values(choices).filter(choice => choice === 'team').length;
-          const answer = await dialog.showMessageBox(window, {type:'question', title:'更新我的 FVA', message:'先留一份备份，再更新正在使用的 FVA？', detail:current.workspace.path + '\n\n需要你选择版本的文件：' + selectedTeam + ' 项用团队的，' + (conflicts.length - selectedTeam) + ' 项保留我的。\n请先保存文件，等更新完成后再继续修改。如果文件在检查后又变了，这次更新会停止。', buttons:['取消','备份并更新'], defaultId:0, cancelId:0, noLink:true});
+          const answer = await dialog.showMessageBox(window, {type:'question', title:sayProject('更新我的'), message:sayProject('先留一份备份，再更新正在使用的') + '？', detail:current.workspace.path + '\n\n需要你选择版本的文件：' + selectedTeam + ' 项用团队的，' + (conflicts.length - selectedTeam) + ' 项保留我的。\n请先保存文件，等更新完成后再继续修改。如果文件在检查后又变了，这次更新会停止。', buttons:['取消','备份并更新'], defaultId:0, cancelId:0, noLink:true});
           if (answer.response !== 1) throw new Error('已取消更新，使用中的文件保持原样。');
           value = await service.applyUpdates({previewId:input.previewId,resolutions:choices});
           updatePreview = null;
@@ -113,12 +159,12 @@ function wire() {
           if (!input || typeof input.backupId !== 'string') throw new Error('请选择可恢复的更新备份。');
           const current = await service.status();
           if (current.lastBackup?.id !== input.backupId) throw new Error('备份已变化，请刷新工作台。');
-          const answer = await dialog.showMessageBox(window, {type:'question', title:'恢复更新前的 FVA', message:'将这次更新涉及的文件恢复到更新前？', detail:'备份时间：' + current.lastBackup.createdAt + '\n\n恢复前会检查文件。如果更新后又有修改，将停止恢复并保留现有文件。请在恢复完成前暂停编辑。', buttons:['取消','恢复更新前的文件'], defaultId:0, cancelId:0, noLink:true});
+          const answer = await dialog.showMessageBox(window, {type:'question', title:sayProject('恢复更新前的'), message:'将这次更新涉及的文件恢复到更新前？', detail:'备份时间：' + current.lastBackup.createdAt + '\n\n恢复前会检查文件。如果更新后又有修改，将停止恢复并保留现有文件。请在恢复完成前暂停编辑。', buttons:['取消','恢复更新前的文件'], defaultId:0, cancelId:0, noLink:true});
           if (answer.response !== 1) throw new Error('已取消恢复。');
           value = await service.restoreUpdate({backupId:input.backupId});
           updatePreview = null;
         } else if (name === 'recoverWorkspace') {
-          const answer = await dialog.showMessageBox(window,{type:'question',title:'开始新一轮修改',message:'保留你的文件，重新准备一轮给团队的修改？',detail:'你正在使用的 FVA 文件保持原样。客户端会重新对照团队版本，检查这个文件夹的差别；旧的修改记录也会保留。等你选择文件并确认后，才会发给团队。',buttons:['取消','保留文件，开始新一轮'],defaultId:0,cancelId:0,noLink:true});
+          const answer = await dialog.showMessageBox(window,{type:'question',title:'开始新一轮修改',message:'保留你的文件，重新准备一轮给团队的修改？',detail:sayProject('你正在使用的', '文件保持原样。') + '客户端会重新对照团队版本，检查这个文件夹的差别；旧的修改记录也会保留。等你选择文件并确认后，才会发给团队。',buttons:['取消','保留文件，开始新一轮'],defaultId:0,cancelId:0,noLink:true});
           if(answer.response!==1)throw new Error('已取消，继续保留当前任务。');
           value=await service.recoverWorkspace();
         } else if (name === 'submit') {
@@ -137,9 +183,13 @@ function wire() {
           if (answer.response !== 1) throw new Error('已取消提交，文件保持原样。');
           value = await service.submit(input.retry === true ? retryInput : input);
         } else value = await service[name]();
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+          value.project = name === 'status' || name === 'login' ? { id: project.id, name: project.name } : project.id;
+        }
         return {ok:true,value};
       } catch (error) { return {ok:false,error:safeError(error)}; }
       finally {
+        inflight -= 1;
         if (mutate) {
           busy = false;
           flushNavigation();
@@ -153,7 +203,12 @@ async function start() {
   // Packaged apps never depend on a colleague's PATH or global Git installation.
   const gitPath = path.join(toolsRoot,'git','cmd','git.exe');
   const ghPath = path.join(toolsRoot,'gh','bin','gh.exe');
-  service = createService({root:path.join(app.getPath('userData'),'workspaces'),gitPath,ghPath});
+  const userData = app.getPath('userData');
+  activeId = readRemembered(userData);
+  services = new Map(projects.map((project) => [project.id, createService({
+    root: path.join(userData, project.dataDir), gitPath, ghPath, project,
+    bindings: (account) => otherBindings(project.id, account),
+  })]));
   protocol.handle('teamspace', request => {
     const u = new URL(request.url);
     if (u.hostname !== 'workspace' || !pages.has(u.pathname) || request.method !== 'GET') return new Response('Not found',{status:404});

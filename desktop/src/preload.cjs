@@ -11,6 +11,13 @@ contextBridge.exposeInMainWorld('teamSpace', Object.freeze({
   updateWorkspace: () => call('updateWorkspace'), recoverWorkspace: () => call('recoverWorkspace'), reviewStatus: () => call('reviewStatus'),
   applyUpdates: input => call('applyUpdates', input), restoreUpdate: input => call('restoreUpdate', input),
   openExternal: key => call('openExternal', key),
+  projects: () => call('projects'),
+  selectProject: id => call('selectProject', id),
+  usageList: input => call('usageList', input),
+  usageDetail: input => call('usageDetail', input),
+  usageImport: input => call('usageImport', input),
+  usageSave: input => call('usageSave', input),
+  usageOpen: input => call('usageOpen', input),
   takeNavigation: () => call('takeNavigation'),
   onNavigation: callback => {
     if (typeof callback !== 'function') return () => {};

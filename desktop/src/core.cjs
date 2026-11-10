@@ -5,23 +5,44 @@ const { cleanEnvironment, runProcess, asText } = require("./core/process.cjs");
 const { pathProblem, validText, worktreeFile, samePath, fileFingerprint, summaryDiff, limit, secretToken } = require("./core/files.cjs");
 
 const { livePathProblem, validateLiveDirectory, verifySkill, scanLive, maxEntries } = require("./core/live.cjs");
+const { projects, projectById } = require("./projects.cjs");
+const { spaced } = require("./text.cjs");
+const { createUsageRecords } = require("./core/usage.cjs");
 
 const { sameBytes, bytesAt, packOperations, unpackOperations, applyOperations, restoreOperations, conflictEntry, updateDiff } = require("./core/install.cjs");
 
 const maxSubmissionBytes = 10 * 1024 * 1024;
-const repo = "i010542/fva";
-const origin = "https://github.com/" + repo + ".git";
 const main = "main";
 const loginPattern = /^[a-z0-9][a-z0-9-]{0,38}$/i;
 const uuidPattern = /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/;
 const shaPattern = /^[a-f0-9]{40}$/;
-const prPattern = /^https:\/\/github\.com\/i010542\/fva\/pull\/([1-9]\d*)$/;
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 const identityKey = (account) => account.login.toLowerCase();
 const windowsPathKey = (name) => name.normalize("NFC").toUpperCase();
 const installFingerprint = (bytes) => fileFingerprint(bytes === null ? "absent" : "file", bytes);
 
-function createService({ root, gitPath, ghPath, run = runProcess }) {
+function siblingDataRoots(rootDir, project) {
+  const resolved = path.resolve(rootDir);
+  if (path.basename(resolved) !== project.dataDir) return [];
+  const parent = path.dirname(resolved);
+  return projects.filter((item) => item.dataDir !== project.dataDir).map((item) => path.join(parent, item.dataDir));
+}
+
+function createService({ root, gitPath, ghPath, run = runProcess, project, forbiddenRoots = [], bindings = async () => [] } = {}) {
+  project = project || projectById("fva");
   root = path.resolve(root);
+  const repo = project.repo;
+  const origin = "https://github.com/" + repo + ".git";
+  const prPattern = new RegExp("^https://github\\.com/" + escapeRegExp(repo) + "/pull/([1-9]\\d*)$");
+  const skillLabel = project.name;
+  const say = (before, after = "") => spaced(before, skillLabel, after);
+  const liveOptions = { label: skillLabel, forbiddenRoots: [...forbiddenRoots, ...siblingDataRoots(root, project)] };
+  const checkLive = (directory) => validateLiveDirectory(directory, root, liveOptions);
+  const readSkill = (directory) => verifySkill(directory, project.skillName);
+  const scan = (directory) => scanLive(directory, skillLabel);
   const stateDirectory = path.join(root, ".state");
   const noConfig = path.join(stateDirectory, "git-config");
   const noHooks = path.join(stateDirectory, "hooks");
@@ -131,7 +152,7 @@ function createService({ root, gitPath, ghPath, run = runProcess }) {
     await prepare();
     const account = await readAccount();
     if (!account) throw new Error("请先登录 GitHub。");
-    if (!(await permission())) throw new Error("当前 GitHub 账号缺少 FVA 仓库写入权限，或权限暂时无法核实。");
+    if (!(await permission())) throw new Error(say("当前 GitHub 账号缺少", "仓库写入权限，或权限暂时无法核实。"));
     return account;
   }
 
@@ -156,7 +177,7 @@ function createService({ root, gitPath, ghPath, run = runProcess }) {
     }
     if (state.livePath !== undefined && (typeof state.livePath !== "string" || !Array.isArray(state.seenPaths) ||
         state.seenPaths.length > maxEntries || state.seenPaths.some(livePathProblem))) {
-      throw new Error("FVA 使用目录记录有误，请重新绑定。");
+      throw new Error(say("", "使用目录记录有误，请重新绑定。"));
     }
     return state;
   }
@@ -264,7 +285,7 @@ function createService({ root, gitPath, ghPath, run = runProcess }) {
     if (branch !== state.branch) throw new Error("请切回该工作区的个人分支。");
     const fetchUrl = await gitText(["remote", "get-url", "--all", "origin"], { cwd });
     const pushUrl = await gitText(["remote", "get-url", "--all", "--push", "origin"], { cwd });
-    if (fetchUrl !== origin || pushUrl !== origin) throw new Error("工作区远程仓库与 FVA 不匹配。");
+    if (fetchUrl !== origin || pushUrl !== origin) throw new Error(say("工作区远程仓库与", "不匹配。"));
     const head = await gitText(["rev-parse", "HEAD"], { cwd });
     if (!shaPattern.test(head)) throw new Error("无法确认工作区版本。");
     if (head !== state.head && head !== state.pending?.commit) throw new Error("工作区的 Git 版本已在应用外变化，请检查个人分支。");
@@ -309,7 +330,7 @@ function createService({ root, gitPath, ghPath, run = runProcess }) {
       }
       if (!previous.livePath && (await changedPaths(cwd)).length) throw new Error("现有工作区还有未提交的改动，请先处理后再开始新任务。");
     }
-    if (previous?.livePath) await validateLiveDirectory(previous.livePath, root);
+    if (previous?.livePath) await checkLive(previous.livePath);
     const state = await cloneWorkspace(account, previous?.installBaseSha);
     if (previous?.livePath) {
       copyInstallation(previous, state);
@@ -326,17 +347,25 @@ function createService({ root, gitPath, ghPath, run = runProcess }) {
     ensureNoInterruptedInstall(previous);
     if (previous?.pending) throw new Error("请先继续提交或保留旧文件另开任务，再绑定目录。");
 
-    const livePath = await validateLiveDirectory(directory, root);
-    await verifySkill(livePath);
+    const livePath = await checkLive(directory);
+    const taken = await bindings(account);
+    if (Array.isArray(taken)) {
+      for (const item of taken) {
+        if (item?.path && samePath(item.path, livePath)) {
+          throw new Error("这个文件夹已经绑定给「" + (item.name || "另一个 Skill") + "」。同一个文件夹不能同时用于两个 Skill。");
+        }
+      }
+    }
+    await readSkill(livePath);
     if (previous?.livePath && samePath(livePath, previous.livePath)) {
       await validateWorkspace(previous);
       return publicWorkspace(previous);
     }
 
-    const liveFiles = await scanLive(livePath);
+    const liveFiles = await scan(livePath);
     const state = await cloneWorkspace(account);
-    await validateLiveDirectory(livePath, root);
-    await verifySkill(livePath);
+    await checkLive(livePath);
+    await readSkill(livePath);
     state.livePath = livePath;
     state.seenPaths = [...liveFiles.values()].filter((file) => !file.reason).map((file) => file.path).sort();
     if (previous) await archiveWorkspace(previous);
@@ -448,8 +477,8 @@ function createService({ root, gitPath, ghPath, run = runProcess }) {
   }
 
   async function liveChanges(account, state, cwd, head) {
-    const source = await validateLiveDirectory(state.livePath, root);
-    const entries = await scanLive(source);
+    const source = await checkLive(state.livePath);
+    const entries = await scan(source);
     const oldEntries = asText((await git(["ls-tree", "-r", "-z", head], { cwd })).stdout).split("\0").filter(Boolean);
     const tracked = new Map(oldEntries.map((entry) => {
       const tab = entry.indexOf("\t");
@@ -463,7 +492,7 @@ function createService({ root, gitPath, ghPath, run = runProcess }) {
       if (!entries.has(name)) entries.set(name, { path: name, missing: true });
     }
     if (entries.size > maxEntries || seen.size > maxEntries) {
-      throw new Error("FVA 使用目录与已见路径超过 500 项，请缩小使用目录后再检查改动。");
+      throw new Error(say("", "使用目录与已见路径超过 500 项，请缩小使用目录后再检查改动。"));
     }
 
     const files = [];
@@ -628,7 +657,7 @@ function createService({ root, gitPath, ghPath, run = runProcess }) {
     if (head === pending.parent) {
       await requireSameAccount(account);
       await assertIndexClear(cwd, paths, pending.parent);
-      const source = state.livePath ? await validateLiveDirectory(state.livePath, root) : cwd;
+      const source = state.livePath ? await checkLive(state.livePath) : cwd;
       for (const file of pending.files) {
         const current = await snapshot(cwd, head, file.path, { source });
         if (current.fingerprint !== file.fingerprint) throw new Error("文件已变化，请恢复到预览版本后重试。");
@@ -701,7 +730,7 @@ function createService({ root, gitPath, ghPath, run = runProcess }) {
     if (review.state === "merged" || review.state === "closed") throw new Error("这项审核已结束，请创建新工作区。");
     await assertIndexClear(cwd, files, head);
     const snapshots = [];
-    const source = state.livePath ? await validateLiveDirectory(state.livePath, root) : cwd;
+    const source = state.livePath ? await checkLive(state.livePath) : cwd;
     let submissionBytes = 0;
     for (const file of files) {
       const current = await snapshot(cwd, head, file, { source });
@@ -725,7 +754,7 @@ function createService({ root, gitPath, ghPath, run = runProcess }) {
     if (!account) throw new Error("请先登录 GitHub。");
     const state = await readState(account);
     if (!state) throw new Error("没有已创建的工作区。");
-    if (state.livePath) return validateLiveDirectory(state.livePath, root);
+    if (state.livePath) return checkLive(state.livePath);
     return (await validateWorkspace(state)).cwd;
   }
 
@@ -767,9 +796,9 @@ function createService({ root, gitPath, ghPath, run = runProcess }) {
   }
 
   async function installPlan(account, state, cwd, head) {
-    if (!state.livePath) throw new Error("请先绑定 FVA 使用目录。");
+    if (!state.livePath) throw new Error(say("请先绑定", "使用目录。"));
     if (state.updateBackup?.interrupted) throw new Error("上次安装尚未恢复，请先恢复备份。");
-    const source = await validateLiveDirectory(state.livePath, root);
+    const source = await checkLive(state.livePath);
     const targetSha = await fetchTeam(cwd, account);
     const baseSha = state.installBaseSha || state.baseSha;
     const output = asText((await git(["diff", "--name-status", "--no-renames", "--no-ext-diff", "-z", baseSha, targetSha, "--"], { cwd })).stdout);
@@ -783,7 +812,7 @@ function createService({ root, gitPath, ghPath, run = runProcess }) {
       targets.add(name);
     }
     if (!state.installBaseSha) {
-      const installed = new Set([...state.seenPaths, ...(await scanLive(source)).keys()]);
+      const installed = new Set([...state.seenPaths, ...(await scan(source)).keys()]);
       const names = asText((await git(["ls-tree", "-r", "--name-only", "-z", targetSha], { cwd })).stdout);
       const tracked = new Set(names.split("\0"));
       for (const name of installed) {
@@ -897,7 +926,7 @@ function createService({ root, gitPath, ghPath, run = runProcess }) {
     }
     if (!plan.hasChanges) throw new Error("没有可以应用的团队文件更新。");
 
-    const source = await validateLiveDirectory(state.livePath, root);
+    const source = await checkLive(state.livePath);
     if (!samePath(source, plan.source)) throw new Error("使用目录已变化，请重新查看更新。");
     if (await fetchTeam(cwd, account) !== plan.targetSha) throw new Error("团队版本已变化，请重新查看更新。");
     const operations = [];
@@ -944,7 +973,7 @@ function createService({ root, gitPath, ghPath, run = runProcess }) {
     await requireSameAccount(account);
     const verified = await validateWorkspace(state);
     if (verified.head !== head || (await findReview(state)).state === "open") throw new Error("当前任务已变化，请重新查看团队更新。");
-    await validateLiveDirectory(source, root);
+    await checkLive(source);
     for (const entry of plan.entries) {
       if (entry.before !== undefined && !sameBytes(await bytesAt(source, entry.view.path), entry.before)) {
         throw new Error(entry.view.path + " 在预览后发生修改，请重新查看更新。");
@@ -980,7 +1009,7 @@ function createService({ root, gitPath, ghPath, run = runProcess }) {
     }
     latestPreview = null;
     latestUpdatePlan = null;
-    return { workspace: publicWorkspace(next), backupId: id, message: operations.length ? "团队更新已应用到 FVA 使用目录。" : "已确认团队版本，使用目录的文件保持原样。" };
+    return { workspace: publicWorkspace(next), backupId: id, message: operations.length ? say("团队更新已应用到", "使用目录。") : "已确认团队版本，使用目录的文件保持原样。" };
   }
 
   async function restoreUpdate({ backupId } = {}) {
@@ -1003,7 +1032,7 @@ function createService({ root, gitPath, ghPath, run = runProcess }) {
       throw new Error("安装后的工作区已有提交或审核，请先保留该工作区再联系维护者恢复。");
     }
     await validateWorkspace(record.previous);
-    const source = await validateLiveDirectory(state.livePath, root);
+    const source = await checkLive(state.livePath);
     const operations = unpackOperations(record.operations);
     await restoreOperations(source, operations, backupId, { preflightOnly: true });
     await beginInstallRecovery(account, state, backup);
@@ -1012,7 +1041,7 @@ function createService({ root, gitPath, ghPath, run = runProcess }) {
     latestPreview = null;
     latestUpdatePlan = null;
     return { workspace: publicWorkspace(record.previous), backupId,
-      message: "已恢复安装前的 FVA 文件及协作工作区。" + (preserved.length ? "另存的外部改动：" + preserved.join("、") : "") };
+      message: say("已恢复安装前的", "文件及协作工作区。") + (preserved.length ? "另存的外部改动：" + preserved.join("、") : "") };
   }
 
   async function updateWorkspace() {
@@ -1044,8 +1073,40 @@ function createService({ root, gitPath, ghPath, run = runProcess }) {
     return findReview(state);
   }
 
+  async function binding(account) {
+    const names = account ? [identityKey(account) + ".json"]
+      : await fs.readdir(stateDirectory).catch((error) => error.code === "ENOENT" ? [] : Promise.reject(error));
+    const paths = [];
+    for (const name of names) {
+      if (!/^[a-z0-9][a-z0-9-]{0,38}\.json$/i.test(name)) continue;
+      const raw = await fs.readFile(path.join(stateDirectory, name), "utf8").catch(() => "");
+      let state;
+      try { state = JSON.parse(raw); } catch { continue; }
+      if (typeof state?.livePath === "string" && state.livePath) paths.push(state.livePath);
+    }
+    return paths;
+  }
+
+  const usage = createUsageRecords({
+    project,
+    journalDir: path.join(stateDirectory, "usage-journal"),
+    async getAccount() {
+      await prepare();
+      const account = await readAccount();
+      if (!account) throw new Error("请先登录 GitHub。");
+      return account;
+    },
+    async request(account, method, endpoint, body) {
+      const args = ["api", "--hostname", "github.com", "--method", method, endpoint];
+      if (body) args.push("--input", "-");
+      const result = await gh(args, { account, timeout: 35000, input: body ? JSON.stringify(body) : undefined });
+      try { return JSON.parse(asText(result.stdout)); }
+      catch { throw new Error("GitHub 未返回可核对的使用记录。"); }
+    },
+  });
+
   return {
-    status, changes: () => serialize(changes), openWorkspace, reviewStatus,
+    status, changes: () => serialize(changes), openWorkspace, reviewStatus, binding,
     bindWorkspace: (directory) => serialize(() => bindWorkspace(directory)),
     login: (onProgress) => serialize(() => login(onProgress)),
     startWorkspace: () => serialize(startWorkspace),
@@ -1055,6 +1116,10 @@ function createService({ root, gitPath, ghPath, run = runProcess }) {
     previewUpdates: () => serialize(previewUpdates),
     applyUpdates: (input) => serialize(() => applyUpdates(input)),
     restoreUpdate: (input) => serialize(() => restoreUpdate(input)),
+    usageList: (input) => serialize(() => usage.list(input)),
+    usageDetail: (input) => serialize(() => usage.detail(input)),
+    usageSave: (input) => serialize(() => usage.save(input)),
+    usageOpen: (input) => serialize(() => usage.link(input)),
   };
 }
 

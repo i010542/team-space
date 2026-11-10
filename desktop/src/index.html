@@ -32,14 +32,18 @@
         <div class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-layers"></use></svg></div>
         <div><strong>共创空间</strong><small>TEAM SPACE</small></div>
       </div>
-      <div class="nav-label">共创空间</div>
+      <div class="skill-switch">
+        <p id="skill-switch-label">当前 Skill</p>
+        <div id="skill-switch" class="skill-switch-list" role="group" aria-labelledby="skill-switch-label"></div>
+      </div>
       <nav aria-label="主导航">
         <button class="nav-item" type="button" data-page="work" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-grid"></use></svg>工作台</button>
         <button class="nav-item" type="button" data-page="team"><svg class="icon" aria-hidden="true"><use href="#i-layers"></use></svg>团队协作</button>
+        <button class="nav-item" type="button" data-page="usage"><svg class="icon" aria-hidden="true"><use href="#i-review"></use></svg>使用记录</button>
         <button class="nav-item" type="button" data-page="docs"><svg class="icon" aria-hidden="true"><use href="#i-book"></use></svg>项目资料</button>
         <button class="nav-item" type="button" data-page="help"><svg class="icon" aria-hidden="true"><use href="#i-help"></use></svg>使用帮助</button>
       </nav>
-      <div class="sidebar-note"><svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg><div><strong>GitHub 登录</strong><p>用团队已开通权限的账号。</p></div></div>
+      <div id="sidebar-account" class="sidebar-note" data-tone="neutral"><svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg><div><strong id="sidebar-account-title">正在连接…</strong><p id="sidebar-account-text">正在检查 GitHub 登录。</p></div></div>
     </aside>
 
     <div class="workspace">
@@ -51,17 +55,23 @@
         <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
         <div id="error" class="notice" data-tone="error" role="alert" hidden></div>
         <section id="navigation-request" class="notice navigation-request" aria-labelledby="navigation-message" hidden>
-          <div><p id="navigation-message" role="status"></p><p class="caption">已写的修改说明和正在查看的改动会保留。</p></div>
+          <div><p id="navigation-message" role="status"></p><p id="navigation-caption" class="caption">已写的修改说明和正在查看的改动会保留。</p></div>
           <div class="actions">
             <button id="dismiss-navigation" class="button button-secondary" type="button">暂不切换</button>
             <button id="accept-navigation" class="button button-primary" type="button">前往</button>
           </div>
         </section>
+        <section id="project-switch-request" class="notice navigation-request" aria-labelledby="project-switch-message" hidden>
+          <div><p id="project-switch-message" role="status"></p></div>
+          <div class="actions">
+            <button id="dismiss-project-switch" class="button button-secondary" type="button">暂不切换</button>
+            <button id="accept-project-switch" class="button button-primary" type="button">切换</button>
+          </div>
+        </section>
 
         <div id="work-page" class="page">
           <div class="page-header work-page-header">
-            <div><p class="eyebrow">我的 FVA</p><h1 id="work-heading" tabindex="-1">FVA 共创工作台</h1><p class="work-intro">修改原来的 FVA 文件，检查后发给团队审核。</p></div>
-            <button id="open-docs" type="button" class="button button-secondary" data-local-view="docs"><svg class="icon" aria-hidden="true"><use href="#i-book"></use></svg>查看文档 <svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button>
+            <div><p id="work-eyebrow" class="eyebrow">我的 Skill</p><h1 id="work-heading" tabindex="-1">共创工作台</h1><p id="work-intro" class="work-intro">修改原来的 Skill 文件，检查后发给团队审核。</p></div>
           </div>
           <section class="hero" aria-labelledby="action-title">
             <div class="hero-copy">
@@ -69,11 +79,11 @@
                 <div class="state-tag"><span class="indicator"></span><span id="hero-status">正在检查</span></div>
                 <h2 id="action-title" tabindex="-1">正在打开工作台</h2>
               </div>
-              <p id="action-description">正在查看登录状态和 FVA 文件夹。</p>
+              <p id="action-description">正在查看登录状态和你的 Skill 文件夹。</p>
               <div class="actions">
                 <button id="primary-action" type="button" class="button button-primary" hidden><span id="primary-label"></span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button>
                 <button id="permission-link" type="button" class="button button-secondary" data-external="repository" hidden>在浏览器查看项目权限 <svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button>
-                <button id="previous-folder" type="button" class="button button-secondary" hidden><svg class="icon" aria-hidden="true"><use href="#i-folder"></use></svg>打开 FVA 文件夹</button>
+                <button id="previous-folder" type="button" class="button button-secondary" hidden><svg class="icon" aria-hidden="true"><use href="#i-folder"></use></svg><span id="previous-folder-label">打开文件夹</span></button>
                 <button id="rebind-workspace" type="button" class="button button-secondary" aria-describedby="action-caption" hidden>更换 SKILL.md</button>
               </div>
               <p id="action-caption" class="caption" hidden></p>
@@ -95,16 +105,16 @@
           </section>
 
           <section id="onboarding" class="card flow-card" aria-labelledby="flow-title">
-            <div class="card-header"><div><p id="flow-label" class="section-label">第一次参与</p><h2 id="flow-title">三步把改动发给团队</h2></div></div>
-            <ol class="flow-steps">
+            <div class="card-header"><div><p id="flow-label" class="section-label">第一次参与</p><h2 id="flow-title">三步把改动发给团队</h2></div><button id="flow-toggle" class="text-button" type="button" aria-controls="flow-steps" aria-expanded="false" hidden>查看三步说明</button></div>
+            <ol id="flow-steps" class="flow-steps">
               <li><button id="step-login" class="flow-step" type="button" disabled>
-                <span class="step-index" aria-hidden="true">01</span><span class="flow-step-copy"><strong>登录账号</strong><span>用团队已开通权限的 GitHub 账号登录。</span><span class="flow-step-action"><span id="step-login-label">登录 GitHub</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
+                <span class="step-index" aria-hidden="true"><span class="step-number">01</span><svg class="icon step-check" aria-hidden="true"><use href="#i-check"></use></svg></span><span class="flow-step-copy"><strong>登录账号</strong><span id="step-login-state" class="step-state">当前这一步</span><span class="flow-step-note">用团队已开通权限的 GitHub 账号登录。</span><span class="flow-step-action"><span id="step-login-label">登录 GitHub</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
               </button></li>
               <li><button id="step-folder" class="flow-step" type="button" disabled>
-                <span class="step-index" aria-hidden="true">02</span><span class="flow-step-copy"><strong>选择 SKILL.md</strong><span>选正在使用的那份 SKILL.md，客户端会记住它所在的文件夹。</span><span class="flow-step-action"><span id="step-folder-label">选择 SKILL.md</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
+                <span class="step-index" aria-hidden="true"><span class="step-number">02</span><svg class="icon step-check" aria-hidden="true"><use href="#i-check"></use></svg></span><span class="flow-step-copy"><strong>选择 SKILL.md</strong><span id="step-folder-state" class="step-state">还没到</span><span class="flow-step-note">选正在使用的那份 SKILL.md，客户端会记住它所在的文件夹。</span><span class="flow-step-action"><span id="step-folder-label">选择 SKILL.md</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
               </button></li>
               <li><button id="step-review" class="flow-step" type="button" disabled>
-                <span class="step-index" aria-hidden="true">03</span><span class="flow-step-copy"><strong>发给团队审核</strong><span>查看本次全部改动，写一句说明，再发送。</span><span class="flow-step-action"><span id="step-review-label">前往查看改动</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
+                <span class="step-index" aria-hidden="true"><span class="step-number">03</span><svg class="icon step-check" aria-hidden="true"><use href="#i-check"></use></svg></span><span class="flow-step-copy"><strong>发给团队审核</strong><span id="step-review-state" class="step-state">还没到</span><span class="flow-step-note">查看本次全部改动，写一句说明，再发送。</span><span class="flow-step-action"><span id="step-review-label">前往查看改动</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span></span>
               </button></li>
             </ol>
           </section>
@@ -120,7 +130,7 @@
               </div>
               <details class="advanced"><summary>查看上次要发送的文件</summary><ul id="pending-files" class="pending-files"></ul></details>
             </section>
-            <div id="workspace-tablist" class="workspace-tabs" role="tablist" aria-label="FVA 工作台" hidden>
+            <div id="workspace-tablist" class="workspace-tabs" role="tablist" aria-label="工作台" hidden>
               <button id="tab-changes" type="button" role="tab" data-work-tab="changes" aria-selected="true" aria-controls="changes-card">查看改动</button>
               <button id="tab-review" type="button" role="tab" data-work-tab="review" aria-selected="false" aria-controls="review-card" tabindex="-1">审核进度</button>
               <button id="tab-updates" type="button" role="tab" data-work-tab="updates" aria-selected="false" aria-controls="team-updates-card" tabindex="-1">更新版本</button>
@@ -136,13 +146,13 @@
                 <div><strong id="changes-empty-title">查看你的改动</strong><p id="changes-empty-description">点「刷新改动」查看可以发给团队的文件。</p></div>
               </div>
               <div id="changes-form" class="changes-form" hidden>
-                <div class="file-list-head"><strong>全部改动文件</strong><span id="batch-count" role="status" aria-live="polite"></span></div>
-                <ul id="file-list" class="file-list"></ul>
                 <form id="submit-form">
                   <label for="submit-title">写一句修改说明</label>
                   <input id="submit-title" name="title" maxlength="120" placeholder="例如：补充开头两秒的镜头提示" autocomplete="off" required>
                   <div class="submit-footer"><p class="caption" id="submit-hint">全部改动会一并发送，包括删除。</p><button id="submit-button" class="button button-primary" type="submit" aria-describedby="submit-hint" disabled>发给团队审核 <svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button></div>
                 </form>
+                <div class="file-list-head"><strong>全部改动文件</strong><span id="batch-count" role="status" aria-live="polite"></span></div>
+                <ul id="file-list" class="file-list"></ul>
               </div>
             </section>
             <section id="review-card" class="card review-card" role="tabpanel" aria-labelledby="tab-review" tabindex="0" hidden>
@@ -157,7 +167,7 @@
             </section>
             <section id="team-updates-card" class="card team-updates-card" role="tabpanel" aria-labelledby="tab-updates" tabindex="0" hidden>
               <div class="card-header">
-                <div><p class="section-label">03 / 团队更新</p><h2 id="team-updates-title" tabindex="-1">更新我的 FVA</h2><p>先看哪些文件会变。确认后会先备份，再更新。</p></div>
+                <div><p class="section-label">03 / 团队更新</p><h2 id="team-updates-title" tabindex="-1">更新我的 Skill</h2><p>先看哪些文件会变。确认后会先备份，再更新。</p></div>
                 <button id="update-workspace" type="button" class="button button-secondary"><svg class="icon" aria-hidden="true"><use href="#i-refresh"></use></svg>检查团队更新</button>
               </div>
               <p id="update-availability" class="caption" role="status" hidden></p>
@@ -170,7 +180,7 @@
                   <p id="update-decisions" class="caption" role="status"></p>
                   <div class="actions">
                     <button id="close-update" type="button" class="button button-secondary">关闭预览</button>
-                    <button id="apply-update" type="button" class="button button-primary" aria-describedby="update-decisions">更新我的 FVA</button>
+                    <button id="apply-update" type="button" class="button button-primary" aria-describedby="update-decisions"><span id="apply-update-label">更新我的 Skill</span></button>
                   </div>
                 </div>
               </section>
@@ -181,18 +191,17 @@
             </section>
             <details id="workspace-details" class="advanced">
               <summary>高级详情</summary>
-              <dl><dt>正在使用的 FVA</dt><dd id="workspace-path"></dd><dt>后台审核分支</dt><dd id="workspace-branch"></dd></dl>
+              <dl><dt id="workspace-path-label">正在使用的 Skill</dt><dd id="workspace-path"></dd><dt>后台审核分支</dt><dd id="workspace-branch"></dd></dl>
             </details>
           </div>
         </div>
 
         <div id="team-page" class="page" hidden>
-          <div class="page-header"><p class="eyebrow">FVA · 团队项目</p><h1 id="team-heading" tabindex="-1">团队协作</h1><p>查看团队文件、待审核的修改和讨论。</p></div>
-          <section id="team-collaboration" class="card team-collaboration" aria-labelledby="team-collaboration-title">
-            <div class="card-header">
-              <div><h2 id="team-collaboration-title">团队入口</h2></div>
-              <button type="button" class="button button-primary" data-external="portalDocs"><svg class="icon" aria-hidden="true"><use href="#i-book"></use></svg>查看项目资料 <svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button>
-            </div>
+          <div class="page-header work-page-header">
+            <div><p id="team-eyebrow" class="eyebrow">团队项目</p><h1 id="team-heading" tabindex="-1">团队协作</h1><p id="team-intro" class="work-intro">查看团队文件、待审核的修改和讨论。</p></div>
+            <button type="button" class="button button-secondary" data-external="portalDocs"><svg class="icon" aria-hidden="true"><use href="#i-book"></use></svg>在浏览器看资料目录 <svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button>
+          </div>
+          <section aria-label="团队入口">
             <div class="project-resources">
               <button type="button" class="project-resource" data-external="portalFiles">
                 <span class="resource-icon"><svg class="icon" aria-hidden="true"><use href="#i-folder"></use></svg></span>
@@ -218,10 +227,54 @@
           </section>
         </div>
 
+        <div id="usage-page" class="page" hidden>
+          <div class="page-header">
+            <p id="usage-project" class="eyebrow">当前 Skill</p><h1 id="usage-heading" tabindex="-1">使用记录</h1>
+            <p>把使用 Skill 时的聊天保存给团队，也可以查看同事留下的记录。</p>
+          </div>
+          <p id="usage-access" class="notice usage-access" role="status" hidden></p>
+          <p id="usage-error" class="notice" data-tone="error" role="alert" hidden></p>
+          <p id="usage-success" class="notice" role="status" hidden></p>
+          <div class="usage-layout">
+            <section class="card usage-card" aria-labelledby="usage-add-title">
+              <div class="card-header"><div><h2 id="usage-add-title">保存一条聊天</h2><p>粘贴文本，或导入一份 UTF-8 文本文件。</p></div></div>
+              <form id="usage-form">
+                <label for="usage-title">标题</label>
+                <input id="usage-title" type="text" autocomplete="off" placeholder="例如：把参考视频拆成三个镜头" required>
+                <label for="usage-tool">使用工具（选填）</label>
+                <select id="usage-tool"><option value="">未填写</option><option value="codex">Codex</option><option value="workbuddy">WorkBuddy</option><option value="other">其他</option></select>
+                <div class="usage-editor-heading"><label for="usage-text">聊天内容</label><button id="usage-import" type="button" class="button button-secondary">导入 .md / .txt</button></div>
+                <textarea id="usage-text" rows="8" placeholder="把要给团队看的聊天粘贴在这里" aria-describedby="usage-length" required></textarea>
+                <p id="usage-length" class="caption"></p>
+                <p class="caption">未保存内容只留在当前窗口，关闭客户端后会丢失。</p>
+                <div class="usage-save">
+                  <p id="usage-visibility" class="caption">保存后，有当前私有仓库权限的成员可以直接查看。</p>
+                  <button id="usage-save" type="submit" class="button button-primary" aria-describedby="usage-visibility" disabled>保存给团队</button>
+                </div>
+              </form>
+            </section>
+            <div class="usage-reader">
+              <section class="card usage-card" aria-labelledby="usage-list-title">
+                <div class="card-header"><div><h2 id="usage-list-title">团队记录</h2></div><button id="usage-refresh" type="button" class="button button-secondary"><svg class="icon" aria-hidden="true"><use href="#i-refresh"></use></svg>刷新记录</button></div>
+                <p id="usage-empty" class="caption"></p>
+                <ul id="usage-items" class="usage-items"></ul>
+                <div id="usage-pagination" class="usage-pagination" hidden>
+                  <button id="usage-prev" type="button" class="button button-secondary">上一页</button><span id="usage-page-number" class="caption" role="status"></span><button id="usage-next" type="button" class="button button-secondary">下一页</button>
+                </div>
+              </section>
+              <section id="usage-detail" class="card usage-card" aria-labelledby="usage-detail-title" hidden>
+                <div class="card-header"><div><h2 id="usage-detail-title" tabindex="-1"></h2><p id="usage-detail-meta"></p></div></div>
+                <pre id="usage-detail-text" tabindex="0" aria-label="聊天正文"></pre>
+                <button id="usage-open" type="button" class="button button-secondary">在浏览器打开记录 <svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button>
+              </section>
+            </div>
+          </div>
+        </div>
+
         <div id="docs-page" class="page" hidden>
-          <div class="page-header"><p class="eyebrow">团队项目 / FVA</p><h1 id="docs-heading" tabindex="-1">项目资料</h1><p>按标题、文件名或分类查找资料。正式项目原文在 GitHub 浏览。</p></div>
+          <div class="page-header"><p id="docs-eyebrow" class="eyebrow">团队项目</p><h1 id="docs-heading" tabindex="-1">项目资料</h1><p>按标题、文件名或分类查找资料。正式项目原文在 GitHub 浏览。</p></div>
           <section class="card doc-card" aria-labelledby="docs-title">
-            <div class="card-header"><div><p class="section-label">只读资料</p><h2 id="docs-title">FVA 资料目录</h2></div></div>
+            <div class="card-header"><div><p class="section-label">只读资料</p><h2 id="docs-title">资料目录</h2></div></div>
             <label for="doc-query" class="doc-search-label">搜索资料</label>
             <input id="doc-query" class="doc-query" type="search" autocomplete="off" placeholder="例如：安装、SKILL.md 或变更记录">
             <div class="doc-toolbar">
@@ -233,13 +286,7 @@
               </div>
               <p id="doc-count" class="caption" role="status"></p>
             </div>
-            <ul class="doc-list">
-              <li data-doc-category="guide"><button type="button" data-local-view="help"><svg class="icon" aria-hidden="true"><use href="#i-help"></use></svg><span><strong>第一次参与 FVA</strong><small>登录、选择 SKILL.md、发改动、查看结果。</small><small class="doc-source">客户端使用帮助</small></span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button></li>
-              <li data-doc-category="project"><button type="button" data-external="skill"><svg class="icon" aria-hidden="true"><use href="#i-file"></use></svg><span><strong>FVA Skill 说明</strong><small>了解 FVA 的用途、适用任务和工作流程。</small><small class="doc-source">SKILL.md · 浏览器原文</small></span><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button></li>
-              <li data-doc-category="guide"><button type="button" data-external="install"><svg class="icon" aria-hidden="true"><use href="#i-file"></use></svg><span><strong>FVA 安装与接入</strong><small>查看安装及接入说明。</small><small class="doc-source">INSTALL.md · 浏览器原文</small></span><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button></li>
-              <li data-doc-category="project"><button type="button" data-external="structure"><svg class="icon" aria-hidden="true"><use href="#i-file"></use></svg><span><strong>FVA 项目结构</strong><small>了解各个目录和文件的用途。</small><small class="doc-source">STRUCTURE.md · 浏览器原文</small></span><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button></li>
-              <li data-doc-category="version"><button type="button" data-external="changelog"><svg class="icon" aria-hidden="true"><use href="#i-file"></use></svg><span><strong>FVA 变更记录</strong><small>查看正式版本的更新历史。</small><small class="doc-source">CHANGELOG.md · 浏览器原文</small></span><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button></li>
-            </ul>
+            <ul id="doc-list" class="doc-list"></ul>
             <div id="doc-empty" class="doc-empty" hidden><p>没有找到匹配的资料。</p><button id="reset-doc-filter" type="button" class="text-button">清空搜索和筛选</button></div>
           </section>
           <p class="caption docs-note">如果浏览器提示没有权限，请确认登录的是团队授权的 GitHub 账号。</p>
@@ -253,7 +300,7 @@
               <li><span class="step-index">01</span><div><strong>用团队账号登录</strong><p>GitHub 是团队保存文件和审核改动的地方。在工作台点「登录 GitHub」，按浏览器提示完成登录。</p></div></li>
               <li><span class="step-index">02</span><div><strong>选择 SKILL.md</strong><p>选正在使用的那份 SKILL.md。客户端会记住它所在的文件夹。以后仍在原处用 WorkBuddy 或 Codex 改文件。</p></div></li>
               <li><span class="step-index">03</span><div><strong>查看改动，发给团队审核</strong><p>保存后回到工作台，点「刷新改动」。检查全部改动，包括删除。写一句说明，再点「发给团队审核」。</p></div></li>
-              <li><span class="step-index">04</span><div><strong>看审核进度，按需更新</strong><p>点「刷新审核进度」看结果。要更新自己的 FVA，先看哪些文件会变，再确认。需要时可以恢复更新前的文件。</p></div></li>
+              <li><span class="step-index">04</span><div><strong>看审核进度，按需更新</strong><p id="help-update-text">点「刷新审核进度」看结果。要更新自己的 Skill，先看哪些文件会变，再确认。需要时可以恢复更新前的文件。</p></div></li>
             </ol>
           </section>
           <section class="card help-card" aria-labelledby="questions-title">
@@ -269,7 +316,7 @@
             <button type="button" class="button button-secondary" data-external="portal">在浏览器查看客户端下载 <svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></button>
           </section>
         </div>
-        <footer class="footer"><span>团队共创空间 · Windows</span><span>FVA 短视频创作 Skill</span></footer>
+        <footer class="footer"><span>团队共创空间 · Windows</span><span id="footer-skill">你的 Skill</span></footer>
       </main>
     </div>
   </div>
